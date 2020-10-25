@@ -56,6 +56,6 @@ dkms.conf
 *.s
 *.list
 *.ld
-/RemoteSystemsTempFiles
-/Vehicle/.setting
-/Vehicle/Debug
+/RemoteSystemsTempFiles/
+/Vehicle/.setting/
+/Vehicle/Debug/
