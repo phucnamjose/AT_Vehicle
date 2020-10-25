@@ -1,0 +1,21 @@
+09:47:52 **** Incremental Build of configuration Debug for project Vehicle ****
+make -j4 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DUSE_HAL_DRIVER -DDEBUG -DSTM32F407xx -c -I../Middlewares/Third_Party/FreeRTOS/Source/include -I../USB_DEVICE/Target -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F -I../Drivers/CMSIS/Include -I../Core/Inc -I../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I../USB_DEVICE/App -I../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:87:11: warning: unused variable 'report' [-Wunused-variable]
+   uint8_t report[50] = {'\0'};
+           ^~~~~~
+arm-none-eabi-gcc -o "Vehicle.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\ATSolution\Vehicle\AT_Vehicle\Code_ST\Vehicle\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Vehicle.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: Vehicle.elf
+ 
+arm-none-eabi-objdump -h -S  Vehicle.elf  > "Vehicle.list"
+arm-none-eabi-size   Vehicle.elf 
+   text	   data	    bss	    dec	    hex	filename
+  31336	     20	   3820	  35176	   8968	Vehicle.elf
+Finished building: default.size.stdout
+ 
+Finished building: Vehicle.list
+ 
+
+09:47:56 Build Finished. 0 errors, 1 warnings. (took 4s.308ms)
+
