@@ -50,12 +50,12 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-/.metadata/*
+**/.metadata/**
 
 # Nam add
 *.s
 *.list
 *.ld
-/RemoteSystemsTempFiles/*
-/Vehicle/.setting/*
-/Vehicle/Debug/*
+*/RemoteSystemsTempFiles/*
+**/Vehicle/.setting/**
+**/Vehicle/Debug/**
