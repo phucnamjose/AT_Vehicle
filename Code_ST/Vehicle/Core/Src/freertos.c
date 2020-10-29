@@ -26,7 +26,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */     
-
+#include "main_thread.h"
+#include "usb_thread.h"
+#include "rasberry_thread.h"
+#include "debug_cmd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,9 +49,13 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
+osMailQId mainTaskMailHandle;
 /* USER CODE END Variables */
 osThreadId mainTaskHandle;
+osThreadId usbTaskHandle;
+osThreadId rasberryTaskHandle;
+osMutexId txPiMutexHandle;
+osMutexId txMegaMutexHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -56,6 +63,8 @@ osThreadId mainTaskHandle;
 /* USER CODE END FunctionPrototypes */
 
 void StartMainTask(void const * argument);
+void StartUsbTask(void const * argument);
+void StartRasTask(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -86,6 +95,15 @@ void MX_FREERTOS_Init(void) {
        
   /* USER CODE END Init */
 
+  /* Create the mutex(es) */
+  /* definition and creation of txPiMutex */
+  osMutexDef(txPiMutex);
+  txPiMutexHandle = osMutexCreate(osMutex(txPiMutex));
+
+  /* definition and creation of txMegaMutex */
+  osMutexDef(txMegaMutex);
+  txMegaMutexHandle = osMutexCreate(osMutex(txMegaMutex));
+
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
@@ -100,12 +118,22 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  osMailQDef(mainTaskMail, 1, mainTaskMail_t);
+  mainTaskMailHandle = osMailCreate(osMailQ(mainTaskMail), NULL);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* definition and creation of mainTask */
-  osThreadDef(mainTask, StartMainTask, osPriorityNormal, 0, 128);
+  osThreadDef(mainTask, StartMainTask, osPriorityRealtime, 0, 1024);
   mainTaskHandle = osThreadCreate(osThread(mainTask), NULL);
+
+  /* definition and creation of usbTask */
+  osThreadDef(usbTask, StartUsbTask, osPriorityNormal, 0, 1024);
+  usbTaskHandle = osThreadCreate(osThread(usbTask), NULL);
+
+  /* definition and creation of rasberryTask */
+  osThreadDef(rasberryTask, StartRasTask, osPriorityNormal, 0, 1024);
+  rasberryTaskHandle = osThreadCreate(osThread(rasberryTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -125,18 +153,55 @@ void StartMainTask(void const * argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartMainTask */
-  HAL_GPIO_WritePin(USB_PULL_GPIO_Port, USB_PULL_Pin, GPIO_PIN_SET);
-
-
+  setupMainThread();
   /* Infinite loop */
   for(;;)
   {
-	HAL_GPIO_TogglePin(LED_USB_GPIO_Port, LED_USB_Pin);
-	HAL_GPIO_TogglePin(LED_D4_GPIO_Port, LED_D4_Pin);
-	HAL_GPIO_TogglePin(LED_D5_GPIO_Port, LED_D5_Pin);
-    osDelay(1000);
+	  osSignalWait(0x01, osWaitForever); // TIM7 generate basic period
+	  loopMainThread();
+    osDelay(1);
   }
   /* USER CODE END StartMainTask */
+}
+
+/* USER CODE BEGIN Header_StartUsbTask */
+/**
+* @brief Function implementing the usbTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartUsbTask */
+void StartUsbTask(void const * argument)
+{
+  /* USER CODE BEGIN StartUsbTask */
+	setupUsbThread();
+  /* Infinite loop */
+  for(;;)
+  {
+	  loopUsbThread();
+    osDelay(1);
+  }
+  /* USER CODE END StartUsbTask */
+}
+
+/* USER CODE BEGIN Header_StartRasTask */
+/**
+* @brief Function implementing the rasberryTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartRasTask */
+void StartRasTask(void const * argument)
+{
+  /* USER CODE BEGIN StartRasTask */
+	setupRasberryThread();
+  /* Infinite loop */
+  for(;;)
+  {
+	  loopRasberryThread();
+    osDelay(1);
+  }
+  /* USER CODE END StartRasTask */
 }
 
 /* Private application code --------------------------------------------------*/

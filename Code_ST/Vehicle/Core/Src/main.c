@@ -21,15 +21,17 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "dma.h"
 #include "i2c.h"
 #include "tim.h"
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
 
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "arduino.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,15 +51,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern UART_HandleTypeDef huart2;
-extern UART_HandleTypeDef huart3;
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim2;
-extern TIM_HandleTypeDef htim3;
-extern TIM_HandleTypeDef htim4;
-extern TIM_HandleTypeDef htim5;
-extern TIM_HandleTypeDef htim7;
-extern TIM_HandleTypeDef htim9;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,9 +63,7 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-	uint8_t uart2_receive_data, uart3_receive_data;
-	uint8_t receive_string[300];
-	uint8_t *ptr_char;
+
 
 /* USER CODE END 0 */
 
@@ -84,7 +76,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
 //	uint8_t my_string[] = "THIS IS UART TEST. AUTHOR: PHUC NAM <3 \n";
 //	ptr_char = &receive_string[0];
- 	uint8_t report[50] = {'\0'};
+// 	uint8_t report[50] = {'\0'};
   /* USER CODE END 1 */
   
 
@@ -112,32 +104,26 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM5_Init();
+  MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_TIM9_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-
-  HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
-  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-
+  InitChecksum();
 //  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
 //  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+//  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+//  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
   //HAL_UART_Receive_IT(&huart2,&uart2_receive_data,1);
   //HAL_UART_Receive_IT(&huart3, ptr_char, 1);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
-  //MX_FREERTOS_Init();
+  MX_FREERTOS_Init(); 
 
   /* Start scheduler */
-  //osKernelStart();
+  osKernelStart();
   
   /* We should never get here as control is now taken by the scheduler */
 
@@ -195,23 +181,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-//	if(huart->Instance==huart2.Instance)
-//	{
-//		HAL_UART_Receive_IT(&huart2,&uart2_receive_data,1);
-//		HAL_UART_Transmit_IT(&huart3,&uart2_receive_data,1);
-//	}
-	if(huart->Instance==huart3.Instance)
-	{
-		HAL_UART_Receive_IT(&huart3, ptr_char, 1);
-		if (*ptr_char == '\n') {
-			ptr_char = &receive_string[0];
-		} else {
-			ptr_char++;
-		}
-	}
-}
+
 /* USER CODE END 4 */
 
 /**

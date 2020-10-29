@@ -46,7 +46,7 @@ all: Vehicle.elf secondary-outputs
 
 # Tool invocations
 Vehicle.elf: $(OBJS) $(USER_OBJS) D:\ATSolution\Vehicle\AT_Vehicle\Code_ST\Vehicle\STM32F407VGTX_FLASH.ld
-	arm-none-eabi-gcc -o "Vehicle.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\ATSolution\Vehicle\AT_Vehicle\Code_ST\Vehicle\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Vehicle.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "Vehicle.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\ATSolution\Vehicle\AT_Vehicle\Code_ST\Vehicle\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Vehicle.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
