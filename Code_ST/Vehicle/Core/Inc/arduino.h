@@ -118,6 +118,5 @@ enum_DebugCmd AtSerial_HaldleCommand(uint8_t at_cmd,
 									uint8_t *data,
 									int32_t lenght,
 									mainTaskMail_t *mail);
-void
 
 #endif /* INC_ARDUINO_H_ */

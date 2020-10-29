@@ -6,6 +6,7 @@
  */
 #include "arduino.h"
 #include "string.h"
+#include "stdio.h"
 
 AtSerial_t atSerialPi;
 AtSerial_t atSerialMega;
@@ -59,7 +60,7 @@ uint16_t ComputeChecksum2(uint16_t crc, uint8_t b)
     return (uint16_t)((crc >> 8) ^ _checksumTable[(uint8_t)(crc ^ b)]);
 }
 
-//#pragma endregion
+#pragma endregion
 
 
 void AtSerial_Init(AtSerial_t *atSerial)

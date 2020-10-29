@@ -30,9 +30,9 @@
 
 /* USER CODE END 1 */
 
-/** Configure pins as 
-        * Analog 
-        * Input 
+/** Configure pins as
+        * Analog
+        * Input
         * Output
         * EVENT_OUT
         * EXTI
@@ -51,12 +51,12 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, LED_D4_Pin|LED_D5_Pin|LED_USB_Pin|USB_PULL_Pin 
+  HAL_GPIO_WritePin(GPIOE, LED_D4_Pin|LED_D5_Pin|LED_USB_Pin|USB_PULL_Pin
                           |STEP1_EN_Pin|STEP1_DIR_Pin|STEP2_EN_Pin|STEP2_DIR_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PEPin PEPin PEPin PEPin 
+  /*Configure GPIO pins : PEPin PEPin PEPin PEPin
                            PEPin PEPin PEPin PEPin */
-  GPIO_InitStruct.Pin = LED_D4_Pin|LED_D5_Pin|LED_USB_Pin|USB_PULL_Pin 
+  GPIO_InitStruct.Pin = LED_D4_Pin|LED_D5_Pin|LED_USB_Pin|USB_PULL_Pin
                           |STEP1_EN_Pin|STEP1_DIR_Pin|STEP2_EN_Pin|STEP2_DIR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;

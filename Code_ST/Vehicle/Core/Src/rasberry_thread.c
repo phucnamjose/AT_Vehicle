@@ -1,10 +1,10 @@
-/*
- * rasberry_thread.c
- *
- *  Created on: Oct 27, 2020
- *      Author: Dang Nam
- */
-
+///*
+// * rasberry_thread.c
+// *
+// *  Created on: Oct 27, 2020
+// *      Author: Dang Nam
+// */
+//
 #include "rasberry_thread.h"
 #include "main_thread.h"
 #include "ringbuffer.h"
@@ -46,8 +46,8 @@ void loopRasberryThread(void) {
 		if (cmd_code > CMD_NONE) {
 			// 1. Forward to Arduino Mega
 			if (cmd_code == FORWARD_MSG) {
-				//serial_sendArduinoMega(&(atSerialPi._serialRecvBytes[0]),
-					//					atSerialPi._segmentLength);
+				serial_sendRasberryPi(&(atSerialPi._serialRecvBytes[0]),
+										atSerialPi._segmentLength);
 			// 2. Send mail to main thread to make desision
 			} else {
 				mainTask_SendMail(&cmd_to_main);

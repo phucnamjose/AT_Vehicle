@@ -145,7 +145,7 @@ void loopMainThread(void) {
 			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\n",
 					fbackR, fbackL, setR, setL);
 
-			//serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
+			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
 			// Reset count
 			count = 0;
 		}

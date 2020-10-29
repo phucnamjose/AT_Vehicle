@@ -1,10 +1,10 @@
-/*
- * arduino_thread.c
- *
- *  Created on: Oct 28, 2020
- *      Author: Dang Nam
- */
-
+///*
+// * arduino_thread.c
+// *
+// *  Created on: Oct 28, 2020
+// *      Author: Dang Nam
+// */
+//
 #include "arduino_thread.h"
 #include "main_thread.h"
 #include "ringbuffer.h"
@@ -14,13 +14,13 @@
 #include "arduino.h"
 #include "tx_dma_manage.h"
 #include "usart.h"
-
-
-/* External Variables */
+//
+//
+///* External Variables */
 extern UART_HandleTypeDef huart3;
 extern RingBuffer_t ringbuff_rx_mega;
 extern AtSerial_t atSerialMega;
-
+//
 uint8_t receive_from_mega;
 
 /* Implementation */
@@ -44,8 +44,8 @@ void loopArduinoThread(void) {
 		if (cmd_code > CMD_NONE) {
 			// 1. Forward to Arduino Mega
 			if (cmd_code == FORWARD_MSG) {
-				//serial_sendRasberryPi(&(atSerialMega._serialRecvBytes[0]),
-							//			atSerialMega._segmentLength);
+				serial_sendRasberryPi(&(atSerialMega._serialRecvBytes[0]),
+										atSerialMega._segmentLength);
 			// 2. Send mail to main thread to make desision
 			} else {
 				mainTask_SendMail(&cmd_to_main);

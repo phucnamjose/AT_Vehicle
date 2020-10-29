@@ -25,10 +25,11 @@
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */     
+/* USER CODE BEGIN Includes */
 #include "main_thread.h"
 #include "usb_thread.h"
 #include "rasberry_thread.h"
+#include "arduino_thread.h".h"
 #include "debug_cmd.h"
 /* USER CODE END Includes */
 
@@ -54,6 +55,7 @@ osMailQId mainTaskMailHandle;
 osThreadId mainTaskHandle;
 osThreadId usbTaskHandle;
 osThreadId rasberryTaskHandle;
+osThreadId arduinoTaskHandle;
 osMutexId txPiMutexHandle;
 osMutexId txMegaMutexHandle;
 
@@ -65,6 +67,7 @@ osMutexId txMegaMutexHandle;
 void StartMainTask(void const * argument);
 void StartUsbTask(void const * argument);
 void StartRasTask(void const * argument);
+void StartArduinoTask(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -128,12 +131,16 @@ void MX_FREERTOS_Init(void) {
   mainTaskHandle = osThreadCreate(osThread(mainTask), NULL);
 
   /* definition and creation of usbTask */
-  osThreadDef(usbTask, StartUsbTask, osPriorityNormal, 0, 1024);
+  osThreadDef(usbTask, StartUsbTask, osPriorityNormal, 0, 512);
   usbTaskHandle = osThreadCreate(osThread(usbTask), NULL);
 
   /* definition and creation of rasberryTask */
-  osThreadDef(rasberryTask, StartRasTask, osPriorityNormal, 0, 1024);
+  osThreadDef(rasberryTask, StartRasTask, osPriorityNormal, 0, 512);
   rasberryTaskHandle = osThreadCreate(osThread(rasberryTask), NULL);
+
+  /* definition and creation of arduinoTask */
+  osThreadDef(arduinoTask, StartArduinoTask, osPriorityNormal, 0, 512);
+  arduinoTaskHandle = osThreadCreate(osThread(arduinoTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -202,6 +209,26 @@ void StartRasTask(void const * argument)
     osDelay(1);
   }
   /* USER CODE END StartRasTask */
+}
+
+/* USER CODE BEGIN Header_StartArduinoTask */
+/**
+* @brief Function implementing the arduinoTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartArduinoTask */
+void StartArduinoTask(void const * argument)
+{
+  /* USER CODE BEGIN StartArduinoTask */
+	setupArduinoThread();
+  /* Infinite loop */
+  for(;;)
+  {
+	  loopArduinoThread();
+    osDelay(1);
+  }
+  /* USER CODE END StartArduinoTask */
 }
 
 /* Private application code --------------------------------------------------*/
