@@ -80,8 +80,8 @@ void DcExecuteOuput(DcServo_t *motor) {
 	}
 }
 
-double DcGetVel(DcServo_t motor) {
-	return motor.current_v;
+double DcGetVel(DcServo_t *motor) {
+	return motor->current_v;
 }
 
 void	DcSetOuput(DcServo_t *motor, double percent) {

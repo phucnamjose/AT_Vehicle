@@ -115,6 +115,7 @@ loopReadAtSerial:
 //#pragma region AT_REGION_Command_and_padding
         case SRS_TCP_CMD_FLAG:
             atSerial->_serialRecvBytes[atSerial->_serialRecvBytesIndex] = b;
+            atSerial->_tcpCommand = b;
             atSerial->_serialRecvBytesIndex += 1;
             atSerial->_serialReadState = SRS_DATA_LEN_PADDING;
             break;
@@ -222,7 +223,7 @@ loopReadAtSerial:
             atSerial->_serialRecvBytes[atSerial->_serialRecvBytesIndex] = b;
             atSerial->_serialRecvBytesIndex += 1;
 
-            atSerial->_serialChecksum = ComputeChecksum(&(atSerial->_serialRecvBytes), SEG_INDEX_DATA_BYTE, atSerial->_tcpDataLength + atSerial->_tcpDataPadding + 2);
+            atSerial->_serialChecksum = ComputeChecksum(&(atSerial->_serialRecvBytes[0]), SEG_INDEX_DATA_BYTE, atSerial->_tcpDataLength + atSerial->_tcpDataPadding + 2);
 
             // Du lieu dung
             if (atSerial->_serialChecksum == 0)
@@ -310,3 +311,58 @@ void 	AtSerial_PrepareCommand(AtSerial_t *atSerial,
     }
 }
 
+
+uint8_t	AtSerial_GetCommand(AtSerial_t *atSerial) {
+	return atSerial->_tcpCommand;
+}
+
+int32_t	AtSerial_GetData(AtSerial_t *atSerial, uint8_t *ptr_des) {
+	int32_t index_start, len;
+
+	index_start = atSerial->_tcpDataIndex;
+	len			= atSerial->_tcpDataLength;
+	memcpy(ptr_des, &(atSerial->_serialRecvBytes[index_start]), len);
+
+	return len;
+}
+
+enum_DebugCmd AtSerial_HaldleCommand(uint8_t at_cmd,
+									uint8_t *data,
+									int32_t lenght,
+									mainTaskMail_t *mail) {
+	// Move
+	if (CMD_MOVE == at_cmd) {
+		if (LENGHT_CMD_MOVE == lenght) {
+			mail->cmd_code 	= MOVE;
+			mail->move		= data[0];
+			return MOVE;
+		} else
+			return CMD_NONE;
+	// Hand
+	} else if (CMD_HAND == at_cmd) {
+		if (LENGHT_CMD_HAND == lenght) {
+			mail->cmd_code 	= HAND;
+			mail->hand		= data[0];
+			return HAND;
+		} else
+			return CMD_NONE;
+	// Set feature
+	} else if (CMD_SET_FEATURE == at_cmd) {
+		if (LENGHT_CMD_SET_FEATURE == lenght) {
+			mail->cmd_code	= SET_FEATURE;
+			return SET_FEATURE;
+		} else
+			return CMD_NONE;
+	} else if (CMD_POSITION_INFO == at_cmd) {
+		mail->cmd_code	= POSITION;
+		memcpy(&(mail->x), &data[0], 4);
+		memcpy(&(mail->y), &data[4], 4);
+		memcpy(&(mail->z), &data[8], 4);
+		memcpy(&(mail->yaw), &data[12], 4);
+		return POSITION;
+	// Otherwise
+	} else {
+		return FORWARD_MSG;
+	}
+
+}

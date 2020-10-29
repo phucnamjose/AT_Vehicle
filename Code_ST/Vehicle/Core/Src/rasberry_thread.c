@@ -6,6 +6,7 @@
  */
 
 #include "rasberry_thread.h"
+#include "main_thread.h"
 #include "ringbuffer.h"
 #include "def_myself.h"
 #include "string.h"
@@ -13,11 +14,13 @@
 #include "arduino.h"
 #include "tx_dma_manage.h"
 #include "usart.h"
+#include "debug_cmd.h"
 
 /* External Variables */
 extern UART_HandleTypeDef huart2;
 extern RingBuffer_t ringbuff_rx_pi;
 extern AtSerial_t 	atSerialPi;
+extern osMailQId mainTaskMailHandle;
 
 uint8_t receive_from_pi;
 
@@ -29,15 +32,27 @@ void setupRasberryThread(void) {
 }
 
 void loopRasberryThread(void) {
-//	if (AtSerial_ReadCommand(&atSerialPi, &ringbuff_rx_pi)) {
-//		//atSerialPi._tcpCommand
-//	}
-	int32_t distance = ringBuff_DistanceOf(&ringbuff_rx_pi, 'M');
-	if ( distance > 0) {
-		uint8_t temp[50];
-		int32_t size = ringBuff_PopArray(&ringbuff_rx_pi, temp, distance+1);
-		serial_sendRasberryPi(temp, size);
-		__NOP();
+	if (AtSerial_ReadCommand(&atSerialPi, &ringbuff_rx_pi)) {
+		uint8_t at_cmd = 1;
+		uint8_t data_raw[60];
+		uint32_t lenght;
+		enum_DebugCmd cmd_code;
+		mainTaskMail_t cmd_to_main;
+
+		at_cmd 		= AtSerial_GetCommand(&atSerialPi);
+		lenght 		= AtSerial_GetData(&atSerialPi, data_raw);
+		cmd_code 	= AtSerial_HaldleCommand(at_cmd, data_raw, lenght, &cmd_to_main);
+
+		if (cmd_code > CMD_NONE) {
+			// 1. Forward to Arduino Mega
+			if (cmd_code == FORWARD_MSG) {
+				//serial_sendArduinoMega(&(atSerialPi._serialRecvBytes[0]),
+					//					atSerialPi._segmentLength);
+			// 2. Send mail to main thread to make desision
+			} else {
+				mainTask_SendMail(&cmd_to_main);
+			}
+		}
 	}
 }
 

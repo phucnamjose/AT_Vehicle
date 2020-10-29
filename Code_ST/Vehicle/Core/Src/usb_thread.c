@@ -6,6 +6,7 @@
  */
 
 #include "usb_thread.h"
+#include "main_thread.h"
 #include "ringbuffer.h"
 #include "def_myself.h"
 #include "string.h"
@@ -38,21 +39,11 @@ void loopUsbThread(void) {
 			// Unpack success
 			enum_DebugCmd cmd_code;
 			mainTaskMail_t cmd_to_main;
-
+			// Handle message
 			cmd_code = MsgToCmd((char *)temp, &cmd_to_main);
-			if (cmd_code > NONE) {
-				mainTaskMail_t *mainMail;
-				mainMail = NULL;
-
-				// Allocate mail memory
-				while (mainMail == NULL) {
-					mainMail = osMailAlloc(mainTaskMailHandle, osWaitForever);
-				}
-				// Copy to mail
-				memcpy(mainMail, &cmd_to_main, sizeof(mainTaskMail_t));
-				// Send mail
-				osStatus status_send;
-				status_send = osMailPut(mainTaskMailHandle, mainMail);
+			// Send to main thread
+			if (cmd_code > CMD_NONE) {
+				mainTask_SendMail(&cmd_to_main);
 			}
 		}
 	}

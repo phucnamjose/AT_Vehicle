@@ -28,8 +28,8 @@ typedef struct PID_t
 void 	PID_Reset(PID_t *pid);
 void 	PID_Compute(PID_t *pid, DcServo_t *motor);
 void 	PID_Setpoint(PID_t *pid, double setpoint);
-double	PID_GetSetpoint(PID_t pid);
+double	PID_GetSetpoint(PID_t *pid);
 void 	PID_SetFactor(PID_t *pid, double kp, double ki, double kd);
-void	PID_GetFactor(PID_t pid, double *kp, double *ki, double *kd);
+void	PID_GetFactor(PID_t *pid, double *kp, double *ki, double *kd);
 
 #endif /* INC_PID_MOTOR_H_ */

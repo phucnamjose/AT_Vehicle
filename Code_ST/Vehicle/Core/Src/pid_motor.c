@@ -50,8 +50,8 @@ void PID_Setpoint(PID_t *pid, double setpoint) {
 	}
 }
 
-double	PID_GetSetpoint(PID_t pid) {
-	return pid.v_setpoint;
+double	PID_GetSetpoint(PID_t *pid) {
+	return pid->v_setpoint;
 }
 
 void PID_SetFactor(PID_t *pid, double kp, double ki, double kd) {
@@ -60,8 +60,8 @@ void PID_SetFactor(PID_t *pid, double kp, double ki, double kd) {
 	pid->Kd = kd;
 }
 
-void	PID_GetFactor(PID_t pid, double *kp, double *ki, double *kd) {
-	*kp = pid.Kp;
-	*ki = pid.Ki;
-	*kd = pid.Kd;
+void	PID_GetFactor(PID_t *pid, double *kp, double *ki, double *kd) {
+	*kp = pid->Kp;
+	*ki = pid->Ki;
+	*kd = pid->Kd;
 }

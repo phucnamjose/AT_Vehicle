@@ -10,7 +10,7 @@
 
 /* Enum type define*/
 typedef	enum{
-	NONE = -1,
+	CMD_NONE = -1,
 	SET_SETPOINT,		// 1. Set reference
 	SET_PID,			// 2. Set PID current factor
 	START,				// 3. Start Execute 2 Wheel
@@ -20,17 +20,35 @@ typedef	enum{
 	MOVE,				// 7. Move vehicle
 	REPORT_ON,			// 8. Start send feedback
 	REPORT_OFF,			// 9. Stop send feedback
-	SET_OUTPUT			// 10. Set output 2 Wheel
+	SET_OUTPUT,			// 10. Set output 2 Wheel
+	HAND,				// 11. Hand robot
+	SET_FEATURE,		// 12. Set feature
+	POSITION,			// 13. Position information
+	FORWARD_MSG			// 14. Forward to Pi or Mega
 }enum_DebugCmd;
 
 typedef	enum{
-	FORWARD = 1,
+	STOP_VEHICLE = 0,
+	FORWARD,
 	BACKWARD,
-	CURVE_LEFT,
-	CURVE_RIGHT,
 	ROTATE_LEFT,
 	ROTATE_RIGHT,
+	FORWARD_LEFT,
+	FORWARD_RIGHT,
+	BACKWARD_LEFT,
+	BACKWARD_RIGHT
 }enum_Move;
+
+
+typedef	enum{
+	HAND_STOP = 0,
+	HAND_LEFT,
+	HAND_RIGHT,
+	HAND_UP,
+	HAND_DOWN,
+	HAND_NODE_UP,
+	HAND_NODE_DOWN
+}enum_Hand;
 
 
 /* Object form*/
@@ -43,6 +61,8 @@ typedef struct mainTaskMail_t
 	double 			L_ki, L_kp, L_kd;
 	double			R_output, L_output;
 	enum_Move		move;
+	enum_Hand		hand;
+	double			x, y, z, yaw;
 }mainTaskMail_t;
 
 /* Function Prototype */

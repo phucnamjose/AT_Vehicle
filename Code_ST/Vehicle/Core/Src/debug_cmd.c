@@ -43,7 +43,7 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			arguments->cmd_code = SET_SETPOINT;
 			return SET_SETPOINT;
 		} else
-			return NONE;
+			return CMD_NONE;
 
 		// 2. Set PID current factor
 	} else if ( 0 == strcmp(command, DebugCmd_Code[SET_PID])) {
@@ -58,7 +58,7 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			arguments->cmd_code = SET_PID;
 			return SET_PID;
 		} else
-			return NONE;
+			return CMD_NONE;
 		// 3. Start Execute 2 Wheel
 	} else if ( 0 == strcmp(command, DebugCmd_Code[START])) {
 		arguments->cmd_code = START;
@@ -82,7 +82,7 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			arguments->cmd_code = MOVE;
 			return MOVE;
 		} else
-			return NONE;
+			return CMD_NONE;
 		// 8. Turn on report velocity
 	} else if ( 0 == strcmp(command, DebugCmd_Code[REPORT_ON])) {
 		arguments->cmd_code = REPORT_ON;
@@ -100,11 +100,11 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			arguments->cmd_code = SET_OUTPUT;
 			return SET_OUTPUT;
 		} else
-			return NONE;
+			return CMD_NONE;
 
 		// Wrong code
 	} else {
-		return NONE;
+		return CMD_NONE;
 	}
 }
 

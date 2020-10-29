@@ -6,6 +6,7 @@
  */
 
 #include "arduino_thread.h"
+#include "main_thread.h"
 #include "ringbuffer.h"
 #include "def_myself.h"
 #include "string.h"
@@ -30,7 +31,26 @@ void setupArduinoThread(void) {
 
 void loopArduinoThread(void) {
 	if (AtSerial_ReadCommand(&atSerialMega, &ringbuff_rx_mega)) {
-		//atSerialPi._tcpCommand
+		uint8_t at_cmd;
+		uint8_t data_raw[60];
+		uint32_t lenght;
+		enum_DebugCmd cmd_code;
+		mainTaskMail_t cmd_to_main;
+
+		at_cmd 		= AtSerial_GetCommand(&atSerialMega);
+		lenght 		= AtSerial_GetData(&atSerialMega, data_raw);
+		cmd_code 	= AtSerial_HaldleCommand(at_cmd, data_raw, lenght, &cmd_to_main);
+
+		if (cmd_code > CMD_NONE) {
+			// 1. Forward to Arduino Mega
+			if (cmd_code == FORWARD_MSG) {
+				//serial_sendRasberryPi(&(atSerialMega._serialRecvBytes[0]),
+							//			atSerialMega._segmentLength);
+			// 2. Send mail to main thread to make desision
+			} else {
+				mainTask_SendMail(&cmd_to_main);
+			}
+		}
 	}
 }
 

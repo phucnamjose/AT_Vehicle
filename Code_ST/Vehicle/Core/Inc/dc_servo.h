@@ -42,7 +42,7 @@ void 	DcServoInit(DcServo_t *motor,
 					TIM_TypeDef *TIM_ENC);
 void 	DcVelUpdate(DcServo_t *motor);
 void 	DcExecuteOuput(DcServo_t *motor);
-double	DcGetVel(DcServo_t motor);
+double	DcGetVel(DcServo_t *motor);
 void	DcSetOuput(DcServo_t *motor, double percent);
 void	DcStopMotor(DcServo_t *motor);
 

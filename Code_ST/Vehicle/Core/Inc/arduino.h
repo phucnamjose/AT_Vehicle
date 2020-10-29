@@ -10,6 +10,7 @@
 
 #include "def_myself.h"
 #include "ringbuffer.h"
+#include "debug_cmd.h"
 
 union ArrayToInt {
     uint8_t array[2];
@@ -38,17 +39,6 @@ uint16_t ComputeChecksum2(uint16_t crc, uint8_t b);
 //#pragma region AT_REGION_Command
 #define CMD_SYNC_BYTE_1 0xA5 // 165
 #define CMD_SYNC_BYTE_2 0x5A // 90
-
-#define CMD_MAP_FEATURE 110
-#define CMD_MAP_INFO 111
-#define CMD_MAP_DATA 112
-#define CMD_MAP_CLEAR 113
-#define CMD_POSE_INFO 114
-
-#define CMD_SET_MAP_FEATURE 115
-#define CMD_SET_MAP_UPDATE 116
-#define CMD_SET_MAP_LOCALIZE 117
-#define CMD_SET_MAP_LOOP_CLOSURE 118
 //#pragma endregion
 
 
@@ -82,13 +72,21 @@ uint16_t ComputeChecksum2(uint16_t crc, uint8_t b);
 #define SEG_LEN_DATA_MAX 60
 //#pragma endregion
 
+// at command
+#define CMD_MOVE			106
+#define CMD_HAND			107
+#define CMD_SET_FEATURE 	108
+#define CMD_POSITION_INFO	114
+
+// lenght data according at command
+#define LENGHT_CMD_MOVE			3
+#define LENGHT_CMD_HAND			3
+#define LENGHT_CMD_SET_FEATURE 	11
+
 
 /* Object Form */
 typedef struct AtSerial
 {
-    //HardwareSerial;
-
-
     // Public
     uint8_t _serialRecvBytes[SERIAL_RECEIVE_MAX_BYTES];
     uint8_t _tcpCommand;
@@ -113,5 +111,13 @@ void 	AtSerial_Init(AtSerial_t *atSerial);
 uint8_t AtSerial_ReadCommand(AtSerial_t  *atSerial, RingBuffer_t *ringbuff_rx);
 void 	AtSerial_PrepareCommand(AtSerial_t *atSerial, uint8_t command, uint8_t data[], uint32_t offset, uint32_t lenght);
 
+uint8_t	AtSerial_GetCommand(AtSerial_t *atSerial);
+int32_t	AtSerial_GetData(AtSerial_t *atSerial, uint8_t *ptr_des);
+
+enum_DebugCmd AtSerial_HaldleCommand(uint8_t at_cmd,
+									uint8_t *data,
+									int32_t lenght,
+									mainTaskMail_t *mail);
+void
 
 #endif /* INC_ARDUINO_H_ */

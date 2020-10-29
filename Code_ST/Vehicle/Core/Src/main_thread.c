@@ -127,10 +127,10 @@ void loopMainThread(void) {
 			double v_lelf, v_right;
 			double sp_left, sp_right;
 			// Get setpoint and feedback
-			v_right		= DcGetVel(MR);
-			v_lelf	 	= DcGetVel(ML);
-			sp_right	= PID_GetSetpoint(pid_MR);
-			sp_left		= PID_GetSetpoint(pid_ML);
+			v_right		= DcGetVel(&MR);
+			v_lelf	 	= DcGetVel(&ML);
+			sp_right	= PID_GetSetpoint(&pid_MR);
+			sp_left		= PID_GetSetpoint(&pid_ML);
 			// Convert to string
 			double2string(fbackR, v_right, 6);
 			double2string(fbackL, v_lelf, 6);
@@ -145,7 +145,7 @@ void loopMainThread(void) {
 			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\n",
 					fbackR, fbackL, setR, setL);
 
-			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
+			//serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
 			// Reset count
 			count = 0;
 		}
@@ -191,8 +191,8 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			double kp_r, ki_r, kd_r;
 			double kp_l, ki_l, kd_l;
 			// Read factor
-			PID_GetFactor(pid_MR, &kp_r, &ki_r, &kd_r);
-			PID_GetFactor(pid_ML, &kp_l, &ki_l, &kd_l);
+			PID_GetFactor(&pid_MR, &kp_r, &ki_r, &kd_r);
+			PID_GetFactor(&pid_ML, &kp_l, &ki_l, &kd_l);
 			// Convert right
 			double2string(kp_buff, kp_r, 6);
 			double2string(ki_buff, ki_r, 6);
@@ -225,4 +225,19 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 		default:
 			break;
 	}
+}
+
+void mainTask_SendMail(mainTaskMail_t *cmd_to_main) {
+	mainTaskMail_t *mainMail;
+	mainMail = NULL;
+
+	// Allocate mail memory
+	while (mainMail == NULL) {
+		mainMail = osMailAlloc(mainTaskMailHandle, osWaitForever);
+	}
+	// Copy to mail
+	memcpy(mainMail, cmd_to_main, sizeof(mainTaskMail_t));
+	// Send mail
+	osStatus status_send;
+	status_send = osMailPut(mainTaskMailHandle, mainMail);
 }

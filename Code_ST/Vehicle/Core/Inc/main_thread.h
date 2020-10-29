@@ -14,5 +14,6 @@
 void setupMainThread(void);
 void loopMainThread(void);
 void decisionAccordingCmd(mainTaskMail_t cmd);
+void mainTask_SendMail(mainTaskMail_t *cmd_to_main);
 
 #endif /* INC_MAIN_THREAD_H_ */
