@@ -60,7 +60,7 @@ uint16_t ComputeChecksum2(uint16_t crc, uint8_t b)
     return (uint16_t)((crc >> 8) ^ _checksumTable[(uint8_t)(crc ^ b)]);
 }
 
-#pragma endregion
+//#pragma endregion
 
 
 void AtSerial_Init(AtSerial_t *atSerial)
@@ -355,12 +355,16 @@ enum_DebugCmd AtSerial_HaldleCommand(uint8_t at_cmd,
 		} else
 			return CMD_NONE;
 	} else if (CMD_POSITION_INFO == at_cmd) {
-		mail->cmd_code	= POSITION;
-		memcpy(&(mail->x), &data[0], 4);
-		memcpy(&(mail->y), &data[4], 4);
-		memcpy(&(mail->z), &data[8], 4);
-		memcpy(&(mail->yaw), &data[12], 4);
-		return POSITION;
+		if (lenght >= 32) {
+			mail->cmd_code	= POSITION;
+			memcpy(&(mail->x), &data[0], 8);
+			memcpy(&(mail->y), &data[8], 8);
+			memcpy(&(mail->z), &data[16], 8);
+			memcpy(&(mail->yaw), &data[24], 8);
+			return POSITION;
+		} else
+			return CMD_NONE;
+
 	// Otherwise
 	} else {
 		return FORWARD_MSG;

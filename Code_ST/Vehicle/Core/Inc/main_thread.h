@@ -14,6 +14,9 @@
 void setupMainThread(void);
 void loopMainThread(void);
 void decisionAccordingCmd(mainTaskMail_t cmd);
+void moveVehicle(enum_Move move_type);
+void handRobot(enum_Hand hand_type);
 void mainTask_SendMail(mainTaskMail_t *cmd_to_main);
+
 
 #endif /* INC_MAIN_THREAD_H_ */

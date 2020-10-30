@@ -12,6 +12,8 @@
 #include "usbd_cdc_if.h"
 #include "string.h"
 #include "tx_dma_manage.h"
+#include "arduino.h"
+#include "move_vehicle.h"
 
 /* External variable*/
 // Peripherals MCU
@@ -225,6 +227,44 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 		default:
 			break;
 	}
+}
+
+void moveVehicle(enum_Move move_type) {
+	switch (move_type) {
+		case STOP_VEHICLE:
+			Vehicle_Stop();
+			break;
+		case FORWARD:
+			Vehicle_Forward();
+			break;
+		case BACKWARD:
+			Vehicle_Backward();
+			break;
+		case ROTATE_LEFT:
+			Vehicle_RotLeft();
+			break;
+		case ROTATE_RIGHT:
+			Vehicle_RotRight();
+			break;
+		case FORWARD_LEFT:
+			Vehicle_ForwardLeft();
+			break;
+		case FORWARD_RIGHT:
+			Vehicle_ForwardRight();
+			break;
+		case BACKWARD_LEFT:
+			Vehicle_BackwardLeft();
+			break;
+		case BACKWARD_RIGHT:
+			Vehicle_BackwardRight();
+			break;
+		default:
+			break;
+	}
+}
+
+void handRobot(enum_Hand hand_type) {
+
 }
 
 void mainTask_SendMail(mainTaskMail_t *cmd_to_main) {
