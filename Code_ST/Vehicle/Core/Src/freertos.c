@@ -29,7 +29,7 @@
 #include "main_thread.h"
 #include "usb_thread.h"
 #include "rasberry_thread.h"
-#include "arduino_thread.h".h"
+#include "arduino_thread.h"
 #include "debug_cmd.h"
 /* USER CODE END Includes */
 

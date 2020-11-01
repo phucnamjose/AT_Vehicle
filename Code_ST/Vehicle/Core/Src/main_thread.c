@@ -14,6 +14,8 @@
 #include "tx_dma_manage.h"
 #include "arduino.h"
 #include "move_vehicle.h"
+#include "main.h"
+#include "MPU9250.h"
 
 /* External variable*/
 // Peripherals MCU
@@ -24,7 +26,11 @@ extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim9;
+
+
 // User
+extern float roll,yaw,pitch;
+extern float q0, q1, q2, q3;
 extern DcServo_t MR;
 extern DcServo_t ML;
 extern PID_t pid_MR;
@@ -34,6 +40,7 @@ extern osMailQId mainTaskMailHandle;
 /* Internal variable*/
 // USB
 uint8_t 		count;
+uint8_t			count_imu;
 uint8_t 		usb_out_buff[200];
 uint8_t			pi_out_buff[200];
 uint8_t 		setR[20];
@@ -43,6 +50,10 @@ uint8_t			fbackL[20];
 uint8_t 		kp_buff[20];
 uint8_t 		ki_buff[20];
 uint8_t 		kd_buff[20];
+uint8_t 		roll_buff[20];
+uint8_t 		pitch_buff[20];
+uint8_t 		yaw_buff[20];
+uint8_t			quar_buff[20];
 
 // Mail
 mainTaskMail_t 	command;
@@ -73,9 +84,23 @@ void setupMainThread(void) {
 	DcServoInit(&ML, 0, 1, TIM1, TIM4);
 	PID_Reset(&pid_MR);
 	PID_Reset(&pid_ML);
+	PID_SetFactor(&pid_MR, 0.4, 0.055, 0.0012);
+	PID_SetFactor(&pid_ML, 0.4, 0.055, 0.0012);
 	// Stop motor
 	DcStopMotor(&MR);
 	DcStopMotor(&ML);
+	//Init IMU
+//	init_IMU();
+//	init_magnetometer();
+//	if (Check_Connection(0x71) == TRUE) {
+//		Calibration_IMU();
+//		HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_RESET);
+//		osDelay(1000);
+//		HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_SET);
+//	} else {
+//		uint8_t err[40] = "IMU Init FAIL..........\n";
+//		CDC_Transmit_FS(err, strlen((const char *)err));
+//	}
 	// Init state
 	Run_PID_flag 	= FALSE;
 	Execute_flag 	= FALSE;
@@ -89,11 +114,37 @@ void loopMainThread(void) {
 	// 1.Clear usb buffer
 	memset(usb_out_buff, 0, sizeof(usb_out_buff));
 	memset(usb_out_buff, 0, sizeof(pi_out_buff));
-	// 2.Update velocity
+	// 2.Read IMU
+//	Process_IMU();
+//	count_imu++;
+//	if (count_imu == 10) {
+//		count_imu = 0;
+//		double2string(roll_buff, roll, 6);
+//		double2string(pitch_buff, pitch, 6);
+//		double2string(yaw_buff, yaw, 6);
+//		//double2string(quar_buff, q3, 6);
+//		char orientation[50];
+//		snprintf(orientation, 50, "%s %s %s\n", roll_buff, pitch_buff, yaw_buff);
+//		strcat((char *)usb_out_buff, orientation);
+//	}
+
+	// 3.Update velocity
 	DcVelUpdate(&MR);
 	DcVelUpdate(&ML);
 
-	// 3.Check mail
+	// 4.Run PID
+	if (Run_PID_flag) {
+		PID_Compute(&pid_MR, &MR);
+		PID_Compute(&pid_ML, &ML);
+	}
+
+	// 5.Execute Output
+	if (Execute_flag) {
+		DcExecuteOuput(&MR);
+		DcExecuteOuput(&ML);
+	}
+
+	// 6.Check mail
 	is_new_mail = osMailGet(mainTaskMailHandle, 0);// If have no mail, skip
 	if (is_new_mail.status == osEventMail) {
 		// Copy mail
@@ -103,26 +154,14 @@ void loopMainThread(void) {
 		is_new_command = TRUE;
 	}
 
-	// 4.Check new command
+	// 7.Check new command
 	if (is_new_command) {
 		decisionAccordingCmd(command);
 		// Reset
 		is_new_command = FALSE;
 	}
 
-	// 5.Run PID
-	if (Run_PID_flag) {
-		PID_Compute(&pid_MR, &MR);
-		PID_Compute(&pid_ML, &ML);
-	}
-
-	// 6.Execute Output
-	if (Execute_flag) {
-		DcExecuteOuput(&MR);
-		DcExecuteOuput(&ML);
-	}
-
-	// 7.Report per 100ms
+	// 8.Report per 100ms
 	if (Report_flag) {
 		count++;
 		if (count == 10) {
@@ -152,7 +191,7 @@ void loopMainThread(void) {
 			count = 0;
 		}
 	}
-	// 8. Check usb buff and send
+	// 9. Check usb buff and send
 	int32_t lenght;
 	lenght = strlen((char *)usb_out_buff);
 	if (lenght > 0)
@@ -212,6 +251,7 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			break;
 		case MOVE:
 			// Move file
+			moveVehicle(cmd.move);
 			break;
 		case REPORT_ON:
 			Report_flag = TRUE;
@@ -232,31 +272,60 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 void moveVehicle(enum_Move move_type) {
 	switch (move_type) {
 		case STOP_VEHICLE:
+			DcStopMotor(&MR);
+			DcStopMotor(&ML);
+			Run_PID_flag 	= FALSE;
+			Execute_flag	= FALSE;
 			Vehicle_Stop();
+			strcat((char *)usb_out_buff, "STOP\n");
 			break;
 		case FORWARD:
 			Vehicle_Forward();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "FORWARD\n");
 			break;
 		case BACKWARD:
 			Vehicle_Backward();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "BACKWARD\n");
 			break;
 		case ROTATE_LEFT:
 			Vehicle_RotLeft();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "ROTATE LEFT\n");
 			break;
 		case ROTATE_RIGHT:
 			Vehicle_RotRight();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "ROTATE RIGHT\n");
 			break;
 		case FORWARD_LEFT:
 			Vehicle_ForwardLeft();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "FORWARD-LEFT\n");
 			break;
 		case FORWARD_RIGHT:
 			Vehicle_ForwardRight();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "FORWARD-RIGHT\n");
 			break;
 		case BACKWARD_LEFT:
 			Vehicle_BackwardLeft();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "BACKWARD-LEFT\n");
 			break;
 		case BACKWARD_RIGHT:
 			Vehicle_BackwardRight();
+			Run_PID_flag 	= TRUE;
+			Execute_flag	= TRUE;
+			strcat((char *)usb_out_buff, "BACKWARD-RIGHT\n");
 			break;
 		default:
 			break;
@@ -278,6 +347,5 @@ void mainTask_SendMail(mainTaskMail_t *cmd_to_main) {
 	// Copy to mail
 	memcpy(mainMail, cmd_to_main, sizeof(mainTaskMail_t));
 	// Send mail
-	osStatus status_send;
-	status_send = osMailPut(mainTaskMailHandle, mainMail);
+	osMailPut(mainTaskMailHandle, mainMail);
 }

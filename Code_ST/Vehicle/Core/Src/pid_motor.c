@@ -21,11 +21,11 @@ void PID_Reset(PID_t *pid) {
 	pid->pre2_error = 0;
 	pid->output = 0;
 	pid->pre_output = 0;
-
+	pid->v_setpoint = 0;
 }
 
 void PID_Compute(PID_t *pid, DcServo_t *motor) {
-	double P_part, I_part, D_part;
+	double P_part, I_part, D_part, output;
 	// Previous
 	pid->pre2_error = pid->pre_error;
 	pid->pre_error 	= pid->error;
@@ -37,9 +37,12 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 	P_part = pid->Kp*(pid->error - pid->pre_error);
 	I_part = 0.5*pid->Ki*BASIC_PERIOD*(pid->error + pid->pre_error);
 	D_part = pid->Kd*(pid->error - 2*pid->pre_error + pid->pre2_error)/BASIC_PERIOD;
-	pid->output = pid->pre_output + P_part + I_part + D_part;
+	output = pid->pre_output + P_part + I_part + D_part;
 	// Filter
-	pid->output = filter(0.08, pid->output, pid->pre_output);
+	output = filter(0.08, output, pid->pre_output);
+//	if (output*(pid->v_setpoint) < 0)
+//		output = 0;
+	pid->output = output;
 	// Update to motor
 	motor->out_percent = pid->output;
 }

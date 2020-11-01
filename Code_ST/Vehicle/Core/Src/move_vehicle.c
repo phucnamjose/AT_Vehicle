@@ -13,8 +13,8 @@ extern PID_t	pid_ML;
 
 
 void Vehicle_Stop(void) {
-	PID_Setpoint(&pid_MR, 0);
-	PID_Setpoint(&pid_ML, 0);
+	PID_Reset(&pid_MR);
+	PID_Reset(&pid_ML);
 }
 
 void Vehicle_Forward(void) {
@@ -23,8 +23,8 @@ void Vehicle_Forward(void) {
 }
 
 void Vehicle_Backward(void) {
-	PID_Setpoint(&pid_MR, 2);
-	PID_Setpoint(&pid_ML, 2);
+	PID_Setpoint(&pid_MR, -2);
+	PID_Setpoint(&pid_ML, -2);
 }
 
 void Vehicle_RotLeft(void) {

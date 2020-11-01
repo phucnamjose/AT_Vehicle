@@ -48,7 +48,7 @@ void DcVelUpdate(DcServo_t *motor) {
 		motor->Diff_Enc = motor->Diff_Enc*(-1);
 	// Update velocity (radian)
 	motor->current_v=((double)motor->Diff_Enc/ENCODER_RESOLUTION*2.0*PI)/BASIC_PERIOD;
-	//motor->current_v = filter(0.08, motor->current_v, motor->pre_v);
+	//motor->current_v = filter(0.2, motor->current_v, motor->pre_v);
 }
 
 void DcExecuteOuput(DcServo_t *motor) {

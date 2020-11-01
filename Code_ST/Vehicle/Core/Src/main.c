@@ -108,13 +108,12 @@ int main(void)
   MX_TIM9_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
+  // Init serial file
   InitChecksum();
-//  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
-//  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-//  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
-//  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-  //HAL_UART_Receive_IT(&huart2,&uart2_receive_data,1);
-  //HAL_UART_Receive_IT(&huart3, ptr_char, 1);
+  // Turn off on light
+  HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED_D5_GPIO_Port, LED_D5_Pin, GPIO_PIN_SET);
+
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
