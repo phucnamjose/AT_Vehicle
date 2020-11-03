@@ -23,7 +23,7 @@ typedef struct DcServo_t
 	uint16_t	Pre_Enc;
 	int32_t		Diff_Enc;
 	uint8_t		Enc_Dir_Invert;
-	// Velocity (rad/s)
+	// Velocity (round/min)
 	double		current_v;
 	double		pre_v;
 	// Output Percent (%)

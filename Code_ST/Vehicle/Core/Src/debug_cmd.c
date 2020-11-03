@@ -16,10 +16,14 @@ const char *DebugCmd_Code[]  = {"SETSPT",
 								"SSTOP2",
 								"SAVPID",
 								"GETPID",
+								"RSTPID",
 								"MOVVEH",
 								"REPONN",
 								"REPOFF",
-								"OUTPUT"};
+								"OUTPUT",
+								"SETHAN",
+								"POWONN",
+								"POWOFF"};
 
 /* Implementation*/
 
@@ -75,7 +79,13 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 	} else if ( 0 == strcmp(command, DebugCmd_Code[GET_PID])) {
 		arguments->cmd_code = GET_PID;
 		return GET_PID;
-		// 7. Move vehicle
+
+		// 7. RESET PID
+	}else if ( 0 == strcmp(command, DebugCmd_Code[RESET_PID])) {
+		arguments->cmd_code = RESET_PID;
+		return RESET_PID;
+
+		// 8. Move vehicle
 	} else if ( 0 == strcmp(command, DebugCmd_Code[MOVE])) {
 		lenght = sscanf(para, "%d", (int *)&(arguments->move));
 		if (lenght == 1) {
@@ -83,15 +93,15 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			return MOVE;
 		} else
 			return CMD_NONE;
-		// 8. Turn on report velocity
+		// 9. Turn on report velocity
 	} else if ( 0 == strcmp(command, DebugCmd_Code[REPORT_ON])) {
 		arguments->cmd_code = REPORT_ON;
 		return REPORT_ON;
-		// 9. Turn off report velocity
+		// 10. Turn off report velocity
 	} else if ( 0 == strcmp(command, DebugCmd_Code[REPORT_OFF])) {
 		arguments->cmd_code = REPORT_OFF;
 		return REPORT_OFF;
-		// 10. Set output 2 Wheel
+		// 11. Set output 2 Wheel
 	} else if ( 0 == strcmp(command, DebugCmd_Code[SET_OUTPUT])) {
 		lenght = sscanf(para, "%lf %lf",
 						&(arguments->R_output),
@@ -101,6 +111,14 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			return SET_OUTPUT;
 		} else
 			return CMD_NONE;
+		// 12. Turn on motion power
+	} else if ( 0 == strcmp(command, DebugCmd_Code[POWER_ON])) {
+			arguments->cmd_code = POWER_ON;
+			return POWER_ON;
+		// 13. Turn off motion power
+	} else if ( 0 == strcmp(command, DebugCmd_Code[POWER_OFF])) {
+			arguments->cmd_code = POWER_OFF;
+			return POWER_OFF;
 
 		// Wrong code
 	} else {

@@ -14,6 +14,13 @@
 #define FALSE	(0)
 #define TRUE	(1)
 
+
+typedef enum
+{
+	Check_NOK = 0,
+	Check_OK = 1,
+}enum_Status;
+
 // Pi constant
 #define PI		(3.14159265359f)
 
@@ -22,5 +29,7 @@
 
 int32_t	double2string( uint8_t *result, double value, uint8_t precision);
 double 	filter(double alpha, double x, double pre_x);
+double	MPS2RPM(double vel);
+double 	Pi_To_Pi(double angle);
 
 #endif /* INC_DEF_MYSELF_H_ */

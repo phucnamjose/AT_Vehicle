@@ -9,7 +9,7 @@
 #define INC_DEBUG_CMD_H_
 
 /* Enum type define*/
-typedef	enum{
+typedef	enum enum_DebugCmd{
 	CMD_NONE = -1,
 	SET_SETPOINT,		// 1. Set reference
 	SET_PID,			// 2. Set PID current factor
@@ -17,17 +17,17 @@ typedef	enum{
 	STOP,				// 4. Stop Execute 2 Wheel
 	SAVE_PID,			// 5. Save PID factor to Internal Flash
 	GET_PID,			// 6. Send PID factor to PC
-	MOVE,				// 7. Move vehicle
-	REPORT_ON,			// 8. Start send feedback
-	REPORT_OFF,			// 9. Stop send feedback
-	SET_OUTPUT,			// 10. Set output 2 Wheel
-	HAND,				// 11. Hand robot
-	SET_FEATURE,		// 12. Set feature
-	POSITION,			// 13. Position information
-	FORWARD_MSG			// 14. Forward to Pi or Mega
+	RESET_PID,			// 7. Reset full PID
+	MOVE,				// 8. Move vehicle
+	REPORT_ON,			// 9. Start send feedback
+	REPORT_OFF,			// 10. Stop send feedback
+	SET_OUTPUT,			// 11. Set output 2 Wheel
+	HAND,				// 12. Hand robot
+	POWER_ON,			// 13. Turn off motion power
+	POWER_OFF			// 14. Turn on motion power
 }enum_DebugCmd;
 
-typedef	enum{
+typedef	enum enum_Move{
 	STOP_VEHICLE = 0,
 	FORWARD,
 	BACKWARD,
@@ -40,7 +40,7 @@ typedef	enum{
 }enum_Move;
 
 
-typedef	enum{
+typedef	enum enum_Hand{
 	HAND_STOP = 0,
 	HAND_LEFT,
 	HAND_RIGHT,

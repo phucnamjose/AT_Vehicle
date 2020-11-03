@@ -12,6 +12,16 @@
 #include "system_params.h"
 #include "dc_servo.h"
 
+#define PID_DEFAULT_RIGHT_KP	0.04
+#define PID_DEFAULT_RIGHT_KI	0.0055
+#define PID_DEFAULT_RIGHT_KD	0.00012
+#define PID_DEFAULT_LEFT_KP		0.04
+#define PID_DEFAULT_LEFT_KI		0.005
+#define PID_DEFAULT_LEFT_KD		0.00012
+
+
+
+
 /* Object form*/
 typedef struct PID_t
 {

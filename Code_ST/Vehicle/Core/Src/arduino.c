@@ -7,9 +7,12 @@
 #include "arduino.h"
 #include "string.h"
 #include "stdio.h"
+#include "tx_dma_manage.h"
 
 AtSerial_t atSerialPi;
 AtSerial_t atSerialMega;
+
+ValueUsing_t valueUsingTable;
 
 union ArrayToInt _arrayToInt;
 union ArrayToLong _arrayToLong;
@@ -327,47 +330,119 @@ int32_t	AtSerial_GetData(AtSerial_t *atSerial, uint8_t *ptr_des) {
 	return len;
 }
 
-enum_DebugCmd AtSerial_HaldleCommand(uint8_t at_cmd,
-									uint8_t *data,
-									int32_t lenght,
-									mainTaskMail_t *mail) {
+enum_MessageClass_t AtSerial_HaldleComputer(uint8_t at_cmd,
+											uint8_t *data,
+											int32_t lenght,
+											mainTaskMail_t *mail) {
 	// Move
 	if (CMD_MOVE == at_cmd) {
 		if (LENGHT_CMD_MOVE == lenght) {
 			mail->cmd_code 	= MOVE;
 			mail->move		= data[0];
-			return MOVE;
+			return MSG_MAIL_TO_MAINTASK;
 		} else
-			return CMD_NONE;
+			return MSG_WRONG;
 	// Hand
 	} else if (CMD_HAND == at_cmd) {
 		if (LENGHT_CMD_HAND == lenght) {
 			mail->cmd_code 	= HAND;
 			mail->hand		= data[0];
-			return HAND;
+			return MSG_MAIL_TO_MAINTASK;
 		} else
-			return CMD_NONE;
-	// Set feature
-	} else if (CMD_SET_FEATURE == at_cmd) {
-		if (LENGHT_CMD_SET_FEATURE == lenght) {
-			mail->cmd_code	= SET_FEATURE;
-			return SET_FEATURE;
-		} else
-			return CMD_NONE;
+			return MSG_WRONG;
+
 	} else if (CMD_POSITION_INFO == at_cmd) {
 		if (lenght >= 32) {
-			mail->cmd_code	= POSITION;
-			memcpy(&(mail->x), &data[0], 8);
-			memcpy(&(mail->y), &data[8], 8);
-			memcpy(&(mail->z), &data[16], 8);
-			memcpy(&(mail->yaw), &data[24], 8);
-			return POSITION;
+			memcpy(&(valueUsingTable.pos_X), &data[0], 8);
+			memcpy(&(valueUsingTable.pos_Y), &data[8], 8);
+			memcpy(&(valueUsingTable.pos_Z), &data[16], 8);
+			memcpy(&(valueUsingTable.pos_Yaw), &data[24], 8);
+			valueUsingTable.pos_number = valueUsingTable.pos_number + 1;
+			return MSG_ONPY_ME;
 		} else
-			return CMD_NONE;
+			return MSG_WRONG;
 
 	// Otherwise
 	} else {
-		return FORWARD_MSG;
+		return MSG_FORWARD;
 	}
 
 }
+
+
+enum_MessageClass_t AtSerial_HaldleArduino(uint8_t at_cmd,
+							uint8_t *data,
+							int32_t lenght,
+							mainTaskMail_t *mail) {
+	// Move
+	if (CMD_MOVE == at_cmd) {
+		if (LENGHT_CMD_MOVE == lenght) {
+			mail->cmd_code 	= MOVE;
+			mail->move		= data[0];
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+	// Hand
+	} else if (CMD_HAND == at_cmd) {
+		if (LENGHT_CMD_HAND == lenght) {
+			mail->cmd_code 	= HAND;
+			mail->hand		= data[0];
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+
+	} else if (CMD_SET_FEATURE == at_cmd) {
+		if (lenght >= 4) {
+			AtSerial_ReadFeatureArduino(data);
+		}
+		return MSG_FORWARD;
+
+	// Otherwise
+	} else {
+		return MSG_FORWARD;
+	}
+
+}
+
+void	AtSerial_ReadFeatureArduino(uint8_t *data) {
+	uint8_t	type_feature = data[0];
+
+	if (CMD_SET_FEATURE_VAT_CAN_1 == type_feature ) {
+		valueUsingTable.ls_object_1 = data[3];
+	} else if (CMD_SET_FEATURE_VAT_CAN_2 == type_feature) {
+		valueUsingTable.ls_object_2 = data[3];
+	} else if (CMD_SET_FEATURE_VAT_CAN_3 == type_feature) {
+		valueUsingTable.ls_object_3 = data[3];
+	} else if (CMD_SET_FEATURE_VAT_CAN_4 == type_feature) {
+		valueUsingTable.ls_object_4 = data[3];
+	} else if (CMD_SET_FEATURE_VAT_CAN_5 == type_feature) {
+		valueUsingTable.ls_object_5 = data[3];
+	} else if (CMD_SET_FEATURE_VAT_CAN_6 == type_feature) {
+		valueUsingTable.ls_object_6 = data[3];
+	}
+}
+
+void	AtSerial_SetRelayArduino(uint8_t nb_of_relay, uint8_t value) {
+	uint8_t data[4];
+
+	if (nb_of_relay < 1 || nb_of_relay > 8)
+		return;
+
+	data[0] = CMD_SET_FEATURE_DEN_BAO_1;
+	data[3] = value;
+ 	AtSerial_PrepareCommand(&atSerialMega, CMD_SET_FEATURE, data, 0, 4);
+	serial_sendArduinoMega(&(atSerialMega.bufferWrite[0]), atSerialMega._sendByteCount);
+}
+
+void	AtSerial_RequestPosition(void) {
+	uint8_t data = 0;
+
+	AtSerial_PrepareCommand(&atSerialPi, CMD_POSITION_INFO, &data, 0, 0);
+	serial_sendRasberryPi(&(atSerialPi.bufferWrite[0]), atSerialPi._sendByteCount);
+}
+
+
+void	AtSerial_ReportSensor(uint8_t nb_of_sensor, uint8_t value) {
+
+}
+

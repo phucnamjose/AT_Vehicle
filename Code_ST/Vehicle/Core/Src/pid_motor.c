@@ -40,15 +40,19 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 	output = pid->pre_output + P_part + I_part + D_part;
 	// Filter
 	output = filter(0.08, output, pid->pre_output);
-//	if (output*(pid->v_setpoint) < 0)
-//		output = 0;
-	pid->output = output;
+	// Saturation
+	if (output > 0.6)
+		output = 0.6;
+	else if (output < -0.6)
+		output = -0.6;
+
+ 	pid->output = output;
 	// Update to motor
 	motor->out_percent = pid->output;
 }
 
 void PID_Setpoint(PID_t *pid, double setpoint) {
-	if (setpoint < 13.0) {
+	if (setpoint < 120.0) {
 		pid->v_setpoint = setpoint;
 	}
 }

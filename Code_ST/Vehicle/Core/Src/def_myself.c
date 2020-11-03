@@ -6,7 +6,7 @@
  */
 
 #include "def_myself.h"
-
+#include "system_params.h"
 
 int32_t	double2string( uint8_t *result, double value, uint8_t precision) {
 	uint8_t nguyen[4];
@@ -83,4 +83,28 @@ int32_t	double2string( uint8_t *result, double value, uint8_t precision) {
 
 double filter(double alpha, double x, double pre_x) {
 	return (1 - alpha)*x + alpha*pre_x;
+}
+
+/** @brief  : Convert m/s to round per minute
+**  @agr    : Input velocity in m/s from panel
+**  @retval : RPM value
+**/
+double MPS2RPM(double vel)
+{
+	return ((vel / (2 * PI * WHEEL_RADIUS)) * 60);
+}
+
+
+/** @brief  : Pi to Pi
+**  @agr    : input angle
+**  @retval : double value
+**/
+double Pi_To_Pi(double angle)
+{
+	if(angle > PI)
+		angle = angle - 2 * PI;
+	else if (angle < -PI)
+		angle = angle + 2 * PI;
+
+	return angle;
 }

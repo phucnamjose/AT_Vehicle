@@ -36,22 +36,29 @@ void loopRasberryThread(void) {
 		uint8_t at_cmd = 1;
 		uint8_t data_raw[60];
 		uint32_t lenght;
-		enum_DebugCmd cmd_code;
+		enum_MessageClass_t msg_classify;
 		mainTaskMail_t cmd_to_main;
-
-		at_cmd 		= AtSerial_GetCommand(&atSerialPi);
-		lenght 		= AtSerial_GetData(&atSerialPi, data_raw);
-		cmd_code 	= AtSerial_HaldleCommand(at_cmd, data_raw, lenght, &cmd_to_main);
-
-		if (cmd_code > CMD_NONE) {
-			// 1. Forward to Arduino Mega
-			if (cmd_code == FORWARD_MSG) {
+		// Read
+		at_cmd 			= AtSerial_GetCommand(&atSerialPi);
+		lenght 			= AtSerial_GetData(&atSerialPi, data_raw);
+		msg_classify 	= AtSerial_HaldleComputer(at_cmd,
+												data_raw,
+												lenght,
+												&cmd_to_main);
+		// Classify
+		switch (msg_classify) {
+			case MSG_WRONG:
+			case MSG_ONPY_ME:
+				break;
+			case MSG_FORWARD:
 				serial_sendArduinoMega(&(atSerialPi._serialRecvBytes[0]),
-										atSerialPi._segmentLength);
-			// 2. Send mail to main thread to make desision
-			} else {
+									atSerialPi._segmentLength);
+				break;
+			case MSG_MAIL_TO_MAINTASK:
 				mainTask_SendMail(&cmd_to_main);
-			}
+				break;
+			default:
+				break;
 		}
 	}
 }

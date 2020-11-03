@@ -97,7 +97,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
        
   /* USER CODE END Init */
-
   /* Create the mutex(es) */
   /* definition and creation of txPiMutex */
   osMutexDef(txPiMutex);

@@ -71,7 +71,7 @@ uint8_t serial_sendArduinoMega(uint8_t *out_buff, int32_t lenght) {
 			size = ringBuff_PopArray(&ringbuff_tx_mega,
 									mega_uart_dma_buff,
 									DMA_TX_BUFF_SIZE);
-			HAL_UART_Transmit_DMA(&huart3, pi_uart_dma_buff, size);
+			HAL_UART_Transmit_DMA(&huart3, mega_uart_dma_buff, size);
 		}
 		ret_val = TRUE;
 	}

@@ -13,9 +13,9 @@
 #include "string.h"
 #include "tx_dma_manage.h"
 #include "arduino.h"
-#include "move_vehicle.h"
+#include "vehicle_overall.h"
 #include "main.h"
-#include "MPU9250.h"
+//#include "MPU9250.h"
 
 /* External variable*/
 // Peripherals MCU
@@ -36,6 +36,7 @@ extern DcServo_t ML;
 extern PID_t pid_MR;
 extern PID_t pid_ML;
 extern osMailQId mainTaskMailHandle;
+extern ValueUsing_t valueUsingTable;
 
 /* Internal variable*/
 // USB
@@ -84,11 +85,18 @@ void setupMainThread(void) {
 	DcServoInit(&ML, 0, 1, TIM1, TIM4);
 	PID_Reset(&pid_MR);
 	PID_Reset(&pid_ML);
-	PID_SetFactor(&pid_MR, 0.4, 0.055, 0.0012);
-	PID_SetFactor(&pid_ML, 0.4, 0.055, 0.0012);
+	PID_SetFactor(&pid_MR,
+			PID_DEFAULT_RIGHT_KP,
+			PID_DEFAULT_RIGHT_KI,
+			PID_DEFAULT_RIGHT_KD);
+	PID_SetFactor(&pid_ML,
+			PID_DEFAULT_LEFT_KP,
+			PID_DEFAULT_LEFT_KI,
+			PID_DEFAULT_LEFT_KD);
 	// Stop motor
 	DcStopMotor(&MR);
 	DcStopMotor(&ML);
+
 	//Init IMU
 //	init_IMU();
 //	init_magnetometer();
@@ -249,6 +257,11 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			strcat((char *)usb_out_buff, report);
 		}
 			break;
+		case RESET_PID:
+			PID_Reset(&pid_MR);
+			PID_Reset(&pid_ML);
+			strcat((char *)usb_out_buff, "RESET PID\n");
+			break;
 		case MOVE:
 			// Move file
 			moveVehicle(cmd.move);
@@ -263,6 +276,14 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			DcSetOuput(&MR, cmd.R_output);
 			DcSetOuput(&ML, cmd.L_output);
 			strcat((char *)usb_out_buff, "Changed OUTPUT\n");
+			break;
+		case POWER_ON:
+			AtSerial_SetRelayArduino(RELAY_MOTION_POW, 1);
+			strcat((char *)usb_out_buff, "Turned on POWER\n");
+			break;
+		case POWER_OFF:
+			AtSerial_SetRelayArduino(RELAY_MOTION_POW, 0);
+			strcat((char *)usb_out_buff, "Turnde off POWER\n");
 			break;
 		default:
 			break;
