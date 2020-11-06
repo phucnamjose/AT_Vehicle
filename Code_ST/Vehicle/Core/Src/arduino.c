@@ -350,7 +350,7 @@ enum_MessageClass_t AtSerial_HaldleComputer(uint8_t at_cmd,
 			return MSG_MAIL_TO_MAINTASK;
 		} else
 			return MSG_WRONG;
-
+	// Position Information
 	} else if (CMD_POSITION_INFO == at_cmd) {
 		if (lenght >= 32) {
 			memcpy(&(valueUsingTable.pos_X), &data[0], 8);
@@ -422,15 +422,12 @@ void	AtSerial_ReadFeatureArduino(uint8_t *data) {
 	}
 }
 
-void	AtSerial_SetRelayArduino(uint8_t nb_of_relay, uint8_t value) {
+void	AtSerial_SetPowerMotion(uint8_t value) {
 	uint8_t data[4];
 
-	if (nb_of_relay < 1 || nb_of_relay > 8)
-		return;
-
-	data[0] = CMD_SET_FEATURE_DEN_BAO_1;
+	data[0] = RELAY_MOTION_POW;
 	data[3] = value;
- 	AtSerial_PrepareCommand(&atSerialMega, CMD_SET_FEATURE, data, 0, 4);
+	AtSerial_PrepareCommand(&atSerialMega, CMD_SET_FEATURE, data, 0, 4);
 	serial_sendArduinoMega(&(atSerialMega.bufferWrite[0]), atSerialMega._sendByteCount);
 }
 

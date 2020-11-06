@@ -112,7 +112,7 @@ uint16_t ComputeChecksum2(uint16_t crc, uint8_t b);
 #define LENGHT_CMD_SET_FEATURE 	11
 
 // exact name
-#define RELAY_MOTION_POW	6
+#define RELAY_MOTION_POW	CMD_SET_FEATURE_RELAY_8_KENH_4
 
 
 /* Object Form */
@@ -175,7 +175,11 @@ typedef struct ValueUsing_t
 /* Function Prototype */
 void 	AtSerial_Init(AtSerial_t *atSerial);
 uint8_t AtSerial_ReadCommand(AtSerial_t  *atSerial, RingBuffer_t *ringbuff_rx);
-void 	AtSerial_PrepareCommand(AtSerial_t *atSerial, uint8_t command, uint8_t data[], uint32_t offset, uint32_t lenght);
+void 	AtSerial_PrepareCommand(AtSerial_t *atSerial,
+								uint8_t command,
+								uint8_t data[],
+								uint32_t offset,
+								uint32_t lenght);
 
 uint8_t	AtSerial_GetCommand(AtSerial_t *atSerial);
 int32_t	AtSerial_GetData(AtSerial_t *atSerial, uint8_t *ptr_des);
@@ -191,7 +195,7 @@ enum_MessageClass_t AtSerial_HaldleArduino(uint8_t at_cmd,
 											mainTaskMail_t *mail);
 
 void	AtSerial_ReadFeatureArduino(uint8_t *data);
-void	AtSerial_SetRelayArduino(uint8_t nb_of_relay, uint8_t value);
+void	AtSerial_SetPowerMotion(uint8_t value);
 void	AtSerial_RequestPosition(void);
 void	AtSerial_ReportSensor(uint8_t nb_of_sensor, uint8_t value);
 

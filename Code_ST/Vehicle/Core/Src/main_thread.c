@@ -142,14 +142,15 @@ void loopMainThread(void) {
 
 	// 4.Run PID
 	if (Run_PID_flag) {
-		PID_Compute(&pid_MR, &MR);
-		PID_Compute(&pid_ML, &ML);
+		PID_TestSquareWave(&pid_MR, &MR);
+		//PID_Compute(&pid_MR, &MR);
+		//PID_Compute(&pid_ML, &ML);
 	}
 
 	// 5.Execute Output
 	if (Execute_flag) {
 		DcExecuteOuput(&MR);
-		DcExecuteOuput(&ML);
+		//DcExecuteOuput(&ML);
 	}
 
 	// 6.Check mail
@@ -179,7 +180,11 @@ void loopMainThread(void) {
 			v_right		= DcGetVel(&MR);
 			v_lelf	 	= DcGetVel(&ML);
 			sp_right	= PID_GetSetpoint(&pid_MR);
-			sp_left		= PID_GetSetpoint(&pid_ML);
+			//sp_left	= PID_GetSetpoint(&pid_ML);
+
+			//sp_right	= PID_GetOutput(&pid_MR);
+			sp_left		= PID_GetOutput(&pid_MR);
+
 			// Convert to string
 			double2string(fbackR, v_right, 6);
 			double2string(fbackL, v_lelf, 6);
@@ -191,7 +196,7 @@ void loopMainThread(void) {
 			strcat((char *)usb_out_buff, feedback);
 
 			char fb_and_sp[60];
-			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\n",
+			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\r\n",
 					fbackR, fbackL, setR, setL);
 
 			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
@@ -278,12 +283,12 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			strcat((char *)usb_out_buff, "Changed OUTPUT\n");
 			break;
 		case POWER_ON:
-			AtSerial_SetRelayArduino(RELAY_MOTION_POW, 1);
+			AtSerial_SetPowerMotion(1);
 			strcat((char *)usb_out_buff, "Turned on POWER\n");
 			break;
 		case POWER_OFF:
-			AtSerial_SetRelayArduino(RELAY_MOTION_POW, 0);
-			strcat((char *)usb_out_buff, "Turnde off POWER\n");
+			AtSerial_SetPowerMotion(0);
+			strcat((char *)usb_out_buff, "Turned off POWER\n");
 			break;
 		default:
 			break;
@@ -295,6 +300,7 @@ void moveVehicle(enum_Move move_type) {
 		case STOP_VEHICLE:
 			DcStopMotor(&MR);
 			DcStopMotor(&ML);
+			Vehicle_Stop();
 			Run_PID_flag 	= FALSE;
 			Execute_flag	= FALSE;
 			Vehicle_Stop();

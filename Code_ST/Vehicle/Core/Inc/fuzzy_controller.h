@@ -50,7 +50,7 @@ double                  Trimf(trimf *ptrimf, double x);
 void                    Trimf_Update(trimf *ptrimf, double a1, double a2, double a3);
 void                    Trapf_Update(trapf *ptrapf, double a1, double a2, double a3, double a4);
 double                  Defuzzification_Max_Min(double e, double edot);
-double                  Defuzzification2_Max_Min(double e, double edot);
+//double                  Defuzzification2_Max_Min(double e, double edot);
 
 /*--------IMU functions ---------*/
 void                    IMU_UpdateFuzzyInput(IMU *pimu);

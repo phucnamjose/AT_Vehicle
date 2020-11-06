@@ -33,7 +33,11 @@ void DcServoInit(DcServo_t *motor,
 
 void DcVelUpdate(DcServo_t *motor) {
 	// Previous
-	motor->pre_v 	= motor->current_v;
+	motor->pre_pre_pre_v 	= motor->pre_pre_v;
+	motor->pre_pre_v		= motor->pre_v;
+	motor->pre_v			= motor->v;
+
+	//motor->pre_v 	= motor->v;
 	motor->Pre_Enc 	= motor->Enc;
 	// Current
 	motor->Enc		= motor->TIM_ENC->CNT;
@@ -47,8 +51,8 @@ void DcVelUpdate(DcServo_t *motor) {
 	if (motor->Enc_Dir_Invert)
 		motor->Diff_Enc = motor->Diff_Enc*(-1);
 	// Update velocity (round/min)
-	motor->current_v=(((double)motor->Diff_Enc/ENCODER_RESOLUTION)*60)/BASIC_PERIOD;
-	//motor->current_v = filter(0.2, motor->current_v, motor->pre_v);
+	motor->current_v=(((double)motor->Diff_Enc/ENCODER_RESOLUTION))/BASIC_PERIOD;
+	//motor->current_v = 0.25*(motor->v + motor->pre_v + motor->pre_pre_v + motor->pre_pre_pre_v);
 }
 
 void DcExecuteOuput(DcServo_t *motor) {

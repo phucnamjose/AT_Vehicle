@@ -148,9 +148,10 @@ void GPS_StanleyControl(GPS *pgps, double v1_rpm, double v2_rpm)
 	// Calculate new Pos if there is no new data from GPS
 	if(!pgps->NewDataAvailable)
 	{
-		//pgps->currentPosX += pgps->Robot_Velocity * cos(pgps->heading_angle) * Timer.T;
-		//pgps->currentPosY += pgps->Robot_Velocity * sin(pgps->heading_angle) * Timer.T;
+		pgps->currentPosX += pgps->Robot_Velocity * cos(pgps->heading_angle) * 5 * BASIC_PERIOD;
+		pgps->currentPosY += pgps->Robot_Velocity * sin(pgps->heading_angle) * 5 * BASIC_PERIOD;
 	}
+	// TODO: chon current pos = wheel pos, lidar pos ==> convert to wheel pos
 	// Calculate the front wheel position
 	pgps->wheelPosX = pgps->currentPosX + DISTANCE_BETWEEN_GPS_FRONT_WHEEL * cos(pgps->heading_angle);
 	pgps->wheelPosY = pgps->currentPosY + DISTANCE_BETWEEN_GPS_FRONT_WHEEL * sin(pgps->heading_angle);

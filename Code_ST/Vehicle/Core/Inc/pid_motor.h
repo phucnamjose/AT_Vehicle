@@ -12,12 +12,12 @@
 #include "system_params.h"
 #include "dc_servo.h"
 
-#define PID_DEFAULT_RIGHT_KP	0.04
-#define PID_DEFAULT_RIGHT_KI	0.0055
-#define PID_DEFAULT_RIGHT_KD	0.00012
-#define PID_DEFAULT_LEFT_KP		0.04
-#define PID_DEFAULT_LEFT_KI		0.005
-#define PID_DEFAULT_LEFT_KD		0.00012
+#define PID_DEFAULT_RIGHT_KP	0
+#define PID_DEFAULT_RIGHT_KI	0
+#define PID_DEFAULT_RIGHT_KD	0
+#define PID_DEFAULT_LEFT_KP		0
+#define PID_DEFAULT_LEFT_KI		0
+#define PID_DEFAULT_LEFT_KD		0
 
 
 
@@ -32,6 +32,8 @@ typedef struct PID_t
 	// Inside Variable
 	double	pre_output;
 	double	error, pre_error, pre2_error;
+	// Count
+	int32_t count;
 }PID_t;
 
 /* Function Prototype */
@@ -41,5 +43,8 @@ void 	PID_Setpoint(PID_t *pid, double setpoint);
 double	PID_GetSetpoint(PID_t *pid);
 void 	PID_SetFactor(PID_t *pid, double kp, double ki, double kd);
 void	PID_GetFactor(PID_t *pid, double *kp, double *ki, double *kd);
+void	PID_TestSquareWave(PID_t *pid, DcServo_t *motor);
+double	PID_GetOutput(PID_t *pid);
+
 
 #endif /* INC_PID_MOTOR_H_ */

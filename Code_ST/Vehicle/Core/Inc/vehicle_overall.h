@@ -61,22 +61,18 @@ typedef	struct Vehicle
 
 #define	TIME_LIMIT_MOVE_REFRESH	1.5 // second
 
+void	Vehicle_EstimatePosition();
+void 	Vehicle_Drive_Auto(void);
 
-
-
-
-
-
-
-void Vehicle_Stop(void);
-void Vehicle_Forward(void);
-void Vehicle_Backward(void);
-void Vehicle_RotLeft(void);
-void Vehicle_RotRight(void);
-void Vehicle_ForwardLeft(void);
-void Vehicle_ForwardRight(void);
-void Vehicle_BackwardLeft(void);
-void Vehicle_BackwardRight(void);
+void 	Vehicle_Stop(void);
+void 	Vehicle_Forward(void);
+void 	Vehicle_Backward(void);
+void 	Vehicle_RotLeft(void);
+void 	Vehicle_RotRight(void);
+void 	Vehicle_ForwardLeft(void);
+void 	Vehicle_ForwardRight(void);
+void 	Vehicle_BackwardLeft(void);
+void 	Vehicle_BackwardRight(void);
 
 
 
