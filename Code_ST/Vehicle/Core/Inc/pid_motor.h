@@ -19,8 +19,7 @@
 #define PID_DEFAULT_LEFT_KI		0
 #define PID_DEFAULT_LEFT_KD		0
 
-
-
+#define PID_K_IN				(0.5)
 
 /* Object form*/
 typedef struct PID_t
@@ -34,6 +33,7 @@ typedef struct PID_t
 	double	error, pre_error, pre2_error;
 	// Count
 	int32_t count;
+	uint8_t run_black_box;
 }PID_t;
 
 /* Function Prototype */
@@ -46,5 +46,7 @@ void	PID_GetFactor(PID_t *pid, double *kp, double *ki, double *kd);
 void	PID_TestSquareWave(PID_t *pid, DcServo_t *motor);
 double	PID_GetOutput(PID_t *pid);
 
+void	PID_StartBlackBox(PID_t *pid);
+uint8_t	PID_RunBlackBox(PID_t *pid, DcServo_t *motor);
 
 #endif /* INC_PID_MOTOR_H_ */

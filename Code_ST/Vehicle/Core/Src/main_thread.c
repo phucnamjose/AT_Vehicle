@@ -142,15 +142,15 @@ void loopMainThread(void) {
 
 	// 4.Run PID
 	if (Run_PID_flag) {
-		PID_TestSquareWave(&pid_MR, &MR);
+		PID_RunBlackBox(&pid_ML, &ML);
 		//PID_Compute(&pid_MR, &MR);
 		//PID_Compute(&pid_ML, &ML);
 	}
 
 	// 5.Execute Output
 	if (Execute_flag) {
-		DcExecuteOuput(&MR);
-		//DcExecuteOuput(&ML);
+		//DcExecuteOuput(&MR);
+		DcExecuteOuput(&ML);
 	}
 
 	// 6.Check mail
@@ -170,36 +170,45 @@ void loopMainThread(void) {
 		is_new_command = FALSE;
 	}
 
-	// 8.Report per 100ms
+	// 8.Report per 10ms
 	if (Report_flag) {
 		count++;
-		if (count == 10) {
+		if (count == 1) {
 			double v_lelf, v_right;
 			double sp_left, sp_right;
+			double out_left, out_right;
 			// Get setpoint and feedback
-			v_right		= DcGetVel(&MR);
+			//v_right		= DcGetVel(&MR);
 			v_lelf	 	= DcGetVel(&ML);
-			sp_right	= PID_GetSetpoint(&pid_MR);
-			//sp_left	= PID_GetSetpoint(&pid_ML);
+//			sp_right	= PID_GetSetpoint(&pid_MR);
+//			sp_left	= PID_GetSetpoint(&pid_ML);
 
 			//sp_right	= PID_GetOutput(&pid_MR);
-			sp_left		= PID_GetOutput(&pid_MR);
+			out_left		= PID_GetOutput(&pid_MR);
+
 
 			// Convert to string
-			double2string(fbackR, v_right, 6);
+//			double2string(fbackR, v_right, 6);
 			double2string(fbackL, v_lelf, 6);
-			double2string(setR, sp_right, 6);
-			double2string(setL, sp_left, 6);
+//			double2string(setR, sp_right, 6);
+//			double2string(setL, sp_left, 6);
+//			double2string(setR, sp_right, 6);
+			double2string(setL, out_left, 6);
 
-			char feedback[30];
-			snprintf(feedback, 30, "%s %s\n", fbackR, fbackL);
-			strcat((char *)usb_out_buff, feedback);
+//			char feedback[30];
+//			snprintf(feedback, 30, "%s %s\n", fbackR, fbackL);
+//			strcat((char *)usb_out_buff, feedback);
 
-			char fb_and_sp[60];
-			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\r\n",
-					fbackR, fbackL, setR, setL);
+//			char fb_and_sp[60];
+//			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\r\n",
+//					fbackR, fbackL, setR, setL);
 
-			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
+			char fb_and_output[60];
+			int32_t len_pi = snprintf(fb_and_output, 60, "%s %s\r\n",
+								fbackL, setL);
+
+
+			serial_sendRasberryPi((uint8_t *)fb_and_output, len_pi);
 			// Reset count
 			count = 0;
 		}
@@ -227,6 +236,7 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 		case START:
 			Run_PID_flag 	= TRUE;
 			Execute_flag	= TRUE;
+			PID_StartBlackBox(&pid_ML);
 			strcat((char *)usb_out_buff, "Started EXE\n");
 			break;
 		case STOP:

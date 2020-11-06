@@ -33,7 +33,7 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 	pid->pre_error 	= pid->error;
 	pid->pre_output = pid->output;
 	// Current
-	pid->v_feedback = motor->current_v*2*PI;
+	pid->v_feedback = motor->current_v*PID_K_IN;
 	pid->error 		= pid->v_setpoint - pid->v_feedback;
 	// PID
 	P_part = pid->Kp*(pid->error - pid->pre_error);
@@ -56,13 +56,13 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 }
 
 void PID_Setpoint(PID_t *pid, double setpoint) {
-	if (setpoint < 2) {
-		pid->v_setpoint = setpoint*2*PI;
+	if (setpoint <= 2) {
+		pid->v_setpoint = setpoint;
 	}
 }
 
 double	PID_GetSetpoint(PID_t *pid) {
-	return pid->v_setpoint/(2*PI);
+	return pid->v_setpoint;
 }
 
 void PID_SetFactor(PID_t *pid, double kp, double ki, double kd) {
@@ -97,3 +97,57 @@ void	PID_TestSquareWave(PID_t *pid, DcServo_t *motor) {
 double	PID_GetOutput(PID_t *pid) {
 	return pid->output;
 }
+
+
+void	PID_StartBlackBox(PID_t *pid) {
+	pid->run_black_box = 1;
+	pid->count = 0;
+}
+
+uint8_t	PID_RunBlackBox(PID_t *pid, DcServo_t *motor) {
+	if (pid->run_black_box) {
+		return FALSE;
+	}
+	pid->count++;
+	if (pid->count > 0 && pid->count < 90) {
+		pid->output = 0.3;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 150) {
+		pid->output = 0.7;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 200) {
+		pid->output = 0.6;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 270) {
+		pid->output = 0.7;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 350) {
+		pid->output = 0.1;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 480) {
+		pid->output = 0.5;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 500) {
+		pid->output = 0.35;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 700) {
+		pid->output = 0.7;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 800) {
+		pid->output = 0.15;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 900) {
+		pid->output = 0.25;
+		motor->out_percent = pid->output;
+	} else if (pid->count < 1000) {
+		pid->output = 0.6;
+		motor->out_percent = pid->output;
+	} else {
+		pid->count = 0;
+		pid->output = 0;
+		motor->out_percent = pid->output;
+	}
+	return TRUE;
+}
+
+
