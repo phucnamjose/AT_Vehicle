@@ -29,8 +29,8 @@ extern TIM_HandleTypeDef htim9;
 
 
 // User
-extern float roll,yaw,pitch;
-extern float q0, q1, q2, q3;
+//extern float roll,yaw,pitch;
+//extern float q0, q1, q2, q3;
 extern DcServo_t MR;
 extern DcServo_t ML;
 extern PID_t pid_MR;
@@ -81,8 +81,8 @@ void setupMainThread(void) {
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 	// Init DcServo motor and PID controller
-	DcServoInit(&MR, 1, 0, TIM2, TIM3);
-	DcServoInit(&ML, 0, 1, TIM1, TIM4);
+	DcServoInit(&MR, 1, 1, TIM2, TIM3);
+	DcServoInit(&ML, 0, 0, TIM1, TIM4);
 	PID_Reset(&pid_MR);
 	PID_Reset(&pid_ML);
 	PID_SetFactor(&pid_MR,
@@ -142,14 +142,14 @@ void loopMainThread(void) {
 
 	// 4.Run PID
 	if (Run_PID_flag) {
-		PID_RunBlackBox(&pid_ML, &ML);
-		//PID_Compute(&pid_MR, &MR);
-		//PID_Compute(&pid_ML, &ML);
+		//PID_RunBlackBox(&pid_ML, &ML);
+		PID_Compute(&pid_MR, &MR);
+		PID_Compute(&pid_ML, &ML);
 	}
 
 	// 5.Execute Output
 	if (Execute_flag) {
-		//DcExecuteOuput(&MR);
+		DcExecuteOuput(&MR);
 		DcExecuteOuput(&ML);
 	}
 
@@ -170,45 +170,53 @@ void loopMainThread(void) {
 		is_new_command = FALSE;
 	}
 
-	// 8.Report per 10ms
+	// 8.Report per 100ms
 	if (Report_flag) {
 		count++;
-		if (count == 1) {
-			double v_lelf, v_right;
-			double sp_left, sp_right;
-			double out_left, out_right;
+		if (count == 10) {
+			double v_lelf;
+			double v_right;
+			double sp_left;
+			double sp_right;
+//			double out_left;
+//			double out_right;
+//			int32_t pid_count;
 			// Get setpoint and feedback
-			//v_right		= DcGetVel(&MR);
+//			pid_count 	= PID_GetCount(&pid_ML);
+
+			v_right		= DcGetVel(&MR);
 			v_lelf	 	= DcGetVel(&ML);
-//			sp_right	= PID_GetSetpoint(&pid_MR);
-//			sp_left	= PID_GetSetpoint(&pid_ML);
+			sp_right	= PID_GetSetpoint(&pid_MR);
+			sp_left		= PID_GetSetpoint(&pid_ML);
 
 			//sp_right	= PID_GetOutput(&pid_MR);
-			out_left		= PID_GetOutput(&pid_MR);
-
+//			out_left		= PID_GetOutput(&pid_ML);
+//			out_right		= PID_GetOutput(&pid_MR);
 
 			// Convert to string
-//			double2string(fbackR, v_right, 6);
+			double2string(fbackR, v_right, 6);
 			double2string(fbackL, v_lelf, 6);
-//			double2string(setR, sp_right, 6);
-//			double2string(setL, sp_left, 6);
-//			double2string(setR, sp_right, 6);
-			double2string(setL, out_left, 6);
+			double2string(setR, sp_right, 6);
+			double2string(setL, sp_left, 6);
+//			double2string(setR, out_right, 6);
+//			double2string(setL, out_left, 6);
 
-//			char feedback[30];
-//			snprintf(feedback, 30, "%s %s\n", fbackR, fbackL);
-//			strcat((char *)usb_out_buff, feedback);
+			char feedback[30];
+			snprintf(feedback, 30, "%s %s\n", fbackR, fbackL);
+			strcat((char *)usb_out_buff, feedback);
 
-//			char fb_and_sp[60];
-//			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\r\n",
-//					fbackR, fbackL, setR, setL);
+			char fb_and_sp[60];
+			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\r\n",
+					fbackR, fbackL, setR, setL);
 
-			char fb_and_output[60];
-			int32_t len_pi = snprintf(fb_and_output, 60, "%s %s\r\n",
-								fbackL, setL);
+//			char fb_and_output[60];
+//			int32_t len_pi = snprintf(fb_and_output, 60, "%d %s %s\r\n",
+//								 (int)pid_count, fbackL, setL);
 
 
-			serial_sendRasberryPi((uint8_t *)fb_and_output, len_pi);
+			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
+//			if (pid_count == 0)
+//				Report_flag = FALSE;
 			// Reset count
 			count = 0;
 		}
@@ -236,7 +244,7 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 		case START:
 			Run_PID_flag 	= TRUE;
 			Execute_flag	= TRUE;
-			PID_StartBlackBox(&pid_ML);
+			//PID_StartBlackBox(&pid_ML);
 			strcat((char *)usb_out_buff, "Started EXE\n");
 			break;
 		case STOP:
@@ -308,12 +316,11 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 void moveVehicle(enum_Move move_type) {
 	switch (move_type) {
 		case STOP_VEHICLE:
-			DcStopMotor(&MR);
-			DcStopMotor(&ML);
+//			DcStopMotor(&MR);
+//			DcStopMotor(&ML);
 			Vehicle_Stop();
 			Run_PID_flag 	= FALSE;
 			Execute_flag	= FALSE;
-			Vehicle_Stop();
 			strcat((char *)usb_out_buff, "STOP\n");
 			break;
 		case FORWARD:

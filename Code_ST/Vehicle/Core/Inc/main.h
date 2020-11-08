@@ -77,12 +77,15 @@ void Error_Handler(void);
 #define STEP2_EN_GPIO_Port GPIOE
 #define STEP2_DIR_Pin GPIO_PIN_10
 #define STEP2_DIR_GPIO_Port GPIOE
-#define LS2_Pin GPIO_PIN_13
-#define LS2_GPIO_Port GPIOB
-#define LS1_L_Pin GPIO_PIN_14
-#define LS1_L_GPIO_Port GPIOB
-#define LS1_R_Pin GPIO_PIN_15
-#define LS1_R_GPIO_Port GPIOB
+#define LS_UP_Pin GPIO_PIN_13
+#define LS_UP_GPIO_Port GPIOB
+#define LS_UP_EXTI_IRQn EXTI15_10_IRQn
+#define LS_DOWN_R_Pin GPIO_PIN_14
+#define LS_DOWN_R_GPIO_Port GPIOB
+#define LS_DOWN_R_EXTI_IRQn EXTI15_10_IRQn
+#define LS_DOWN_L_Pin GPIO_PIN_15
+#define LS_DOWN_L_GPIO_Port GPIOB
+#define LS_DOWN_L_EXTI_IRQn EXTI15_10_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

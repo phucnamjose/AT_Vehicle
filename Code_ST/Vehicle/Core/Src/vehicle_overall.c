@@ -33,43 +33,43 @@ void Vehicle_Stop(void) {
 }
 
 void Vehicle_Forward(void) {
-	PID_Setpoint(&pid_MR, 30);
-	PID_Setpoint(&pid_ML, 30);
+	PID_Setpoint(&pid_MR, 2);
+	PID_Setpoint(&pid_ML, 2);
 }
 
 void Vehicle_Backward(void) {
-	PID_Setpoint(&pid_MR, -20);
-	PID_Setpoint(&pid_ML, -20);
+	PID_Setpoint(&pid_MR, -1);
+	PID_Setpoint(&pid_ML, -1);
 }
 
 void Vehicle_RotLeft(void) {
-	PID_Setpoint(&pid_MR, 20);
-	PID_Setpoint(&pid_ML, -20);
+	PID_Setpoint(&pid_MR, 1);
+	PID_Setpoint(&pid_ML, -1);
 }
 
 void Vehicle_RotRight(void) {
-	PID_Setpoint(&pid_MR, -20);
-	PID_Setpoint(&pid_ML, 20);
+	PID_Setpoint(&pid_MR, -1);
+	PID_Setpoint(&pid_ML, 1);
 }
 
 void Vehicle_ForwardLeft(void) {
-	PID_Setpoint(&pid_MR, 30);
-	PID_Setpoint(&pid_ML, 20);
+	PID_Setpoint(&pid_MR, 2);
+	PID_Setpoint(&pid_ML, 1);
 }
 
 void Vehicle_ForwardRight(void) {
-	PID_Setpoint(&pid_MR, 20);
-	PID_Setpoint(&pid_ML, 30);
+	PID_Setpoint(&pid_MR, 1);
+	PID_Setpoint(&pid_ML, 2);
 }
 
 void Vehicle_BackwardLeft(void) {
-	PID_Setpoint(&pid_MR, -30);
-	PID_Setpoint(&pid_ML, -20);
+	PID_Setpoint(&pid_MR, -2);
+	PID_Setpoint(&pid_ML, -1);
 }
 
 void Vehicle_BackwardRight(void) {
-	PID_Setpoint(&pid_MR, -20);
-	PID_Setpoint(&pid_ML, -30);
+	PID_Setpoint(&pid_MR, -1);
+	PID_Setpoint(&pid_ML, -2);
 }
 
 

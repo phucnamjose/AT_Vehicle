@@ -126,7 +126,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of mainTask */
-  osThreadDef(mainTask, StartMainTask, osPriorityRealtime, 0, 1024);
+  osThreadDef(mainTask, StartMainTask, osPriorityRealtime, 0, 1280);
   mainTaskHandle = osThreadCreate(osThread(mainTask), NULL);
 
   /* definition and creation of usbTask */

@@ -51,8 +51,10 @@ void DcVelUpdate(DcServo_t *motor) {
 	if (motor->Enc_Dir_Invert)
 		motor->Diff_Enc = motor->Diff_Enc*(-1);
 	// Update velocity (round/min)
-	motor->current_v=(((double)motor->Diff_Enc/ENCODER_RESOLUTION))/BASIC_PERIOD;
-	//motor->current_v = 0.25*(motor->v + motor->pre_v + motor->pre_pre_v + motor->pre_pre_pre_v);
+	motor->v=(((double)motor->Diff_Enc/ENCODER_RESOLUTION))/BASIC_PERIOD;
+	motor->current_v = motor->v;
+	//motor->current_v = 0.6*motor->v + 0.25*motor->pre_v \
+	//					+ 0.1*motor->pre_pre_v + 0.05*motor->pre_pre_pre_v;
 }
 
 void DcExecuteOuput(DcServo_t *motor) {
@@ -70,8 +72,8 @@ void DcExecuteOuput(DcServo_t *motor) {
 		dir = 1;
 	}
 	// Saturation
-	if (out_percent > 0.6)
-		out_percent = 0.6;
+	if (out_percent > 0.7)
+		out_percent = 0.7;
 	// Convert duty to pulses time
 	pulses = out_percent * PWM_RESOLUTION;
 	// Write to timer

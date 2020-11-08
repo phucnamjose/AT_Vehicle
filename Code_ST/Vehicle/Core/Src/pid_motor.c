@@ -33,7 +33,7 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 	pid->pre_error 	= pid->error;
 	pid->pre_output = pid->output;
 	// Current
-	pid->v_feedback = motor->current_v*PID_K_IN;
+	pid->v_feedback = motor->current_v;
 	pid->error 		= pid->v_setpoint - pid->v_feedback;
 	// PID
 	P_part = pid->Kp*(pid->error - pid->pre_error);
@@ -44,11 +44,11 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 	// Saturation
 	if (output > 0.6)
 		output = 0.6;
-	else if (output < 0)
-		output = 0;
+	else if (output < -0.6)
+		output = -0.6;
 
 	// Filter
-	output = filter(0.08, output, pid->pre_output);
+	//output = filter(0.08, output, pid->pre_output);
 
  	pid->output = output;
 	// Update to motor
@@ -56,7 +56,7 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 }
 
 void PID_Setpoint(PID_t *pid, double setpoint) {
-	if (setpoint <= 2) {
+	if (setpoint >= -1.5 && setpoint <= 1.5) {
 		pid->v_setpoint = setpoint;
 	}
 }
@@ -98,6 +98,10 @@ double	PID_GetOutput(PID_t *pid) {
 	return pid->output;
 }
 
+int32_t	PID_GetCount(PID_t *pid) {
+	return pid->count;
+}
+
 
 void	PID_StartBlackBox(PID_t *pid) {
 	pid->run_black_box = 1;
@@ -105,7 +109,7 @@ void	PID_StartBlackBox(PID_t *pid) {
 }
 
 uint8_t	PID_RunBlackBox(PID_t *pid, DcServo_t *motor) {
-	if (pid->run_black_box) {
+	if (pid->run_black_box == 0) {
 		return FALSE;
 	}
 	pid->count++;
@@ -146,6 +150,7 @@ uint8_t	PID_RunBlackBox(PID_t *pid, DcServo_t *motor) {
 		pid->count = 0;
 		pid->output = 0;
 		motor->out_percent = pid->output;
+		pid->run_black_box = 0;
 	}
 	return TRUE;
 }
