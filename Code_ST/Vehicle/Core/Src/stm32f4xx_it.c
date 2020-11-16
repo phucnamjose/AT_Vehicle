@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cmsis_os.h"
+#include "step_motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,6 +70,8 @@ extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
+extern Step_t	stepDown;
+extern Step_t	stepUp;
 extern osThreadId mainTaskHandle;
 /* USER CODE END EV */
 
@@ -207,7 +210,12 @@ void TIM1_BRK_TIM9_IRQHandler(void)
   HAL_TIM_IRQHandler(&htim1);
   HAL_TIM_IRQHandler(&htim9);
   /* USER CODE BEGIN TIM1_BRK_TIM9_IRQn 1 */
-
+  stepDown.pulse_count_in_period++;
+  if (stepDown.pulse_count_in_period >= stepDown.pulse_in_period) {
+	  HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1);
+	  __HAL_TIM_SET_COUNTER(&htim9, 0);
+	  __HAL_TIM_DISABLE_IT(&htim9, TIM_IT_UPDATE);
+  }
   /* USER CODE END TIM1_BRK_TIM9_IRQn 1 */
 }
 
@@ -265,7 +273,11 @@ void TIM5_IRQHandler(void)
   /* USER CODE END TIM5_IRQn 0 */
   HAL_TIM_IRQHandler(&htim5);
   /* USER CODE BEGIN TIM5_IRQn 1 */
-
+  stepUp.pulse_count_in_period++;
+  if (stepUp.pulse_count_in_period >= stepUp.pulse_in_period) {
+	  HAL_TIM_PWM_Stop_IT(&htim5, TIM_CHANNEL_1);
+	  __HAL_TIM_SET_COUNTER(&htim5, 0);
+  }
   /* USER CODE END TIM5_IRQn 1 */
 }
 

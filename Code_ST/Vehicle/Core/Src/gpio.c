@@ -70,7 +70,7 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(USB_DETECT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PBPin PBPin PBPin */
-  GPIO_InitStruct.Pin = LS_UP_Pin|LS_DOWN_R_Pin|LS_DOWN_L_Pin;
+  GPIO_InitStruct.Pin = LS_DOWN_L_Pin|LS_DOWN_R_Pin|LS_UP_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

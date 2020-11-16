@@ -29,7 +29,8 @@ typedef enum
 
 int32_t	double2string( uint8_t *result, double value, uint8_t precision);
 double 	filter(double alpha, double x, double pre_x);
-double	MPS2RPM(double vel);
+double	MPS2RPS(double vel);
+double	RPS2MPS(double vel);
 double 	Pi_To_Pi(double angle);
 
 #endif /* INC_DEF_MYSELF_H_ */

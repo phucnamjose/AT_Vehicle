@@ -315,7 +315,6 @@ void 	AtSerial_PrepareCommand(AtSerial_t *atSerial,
     }
 }
 
-
 uint8_t	AtSerial_GetCommand(AtSerial_t *atSerial) {
 	return atSerial->_tcpCommand;
 }
@@ -337,7 +336,7 @@ enum_MessageClass_t AtSerial_HaldleComputer(uint8_t at_cmd,
 	// Move
 	if (CMD_MOVE == at_cmd) {
 		if (LENGHT_CMD_MOVE == lenght) {
-			mail->cmd_code 	= MOVE;
+			mail->cmd_code 	= MOVE_MANUAL;
 			mail->move		= data[0];
 			return MSG_MAIL_TO_MAINTASK;
 		} else
@@ -345,30 +344,87 @@ enum_MessageClass_t AtSerial_HaldleComputer(uint8_t at_cmd,
 	// Hand
 	} else if (CMD_HAND == at_cmd) {
 		if (LENGHT_CMD_HAND == lenght) {
-			mail->cmd_code 	= HAND;
-			mail->hand		= data[0];
+			mail->cmd_code 			= HAND_MANUAL;
+			mail->hand_manual		= data[0];
 			return MSG_MAIL_TO_MAINTASK;
 		} else
 			return MSG_WRONG;
 	// Position Information
 	} else if (CMD_POSITION_INFO == at_cmd) {
 		if (lenght >= 32) {
-			memcpy(&(valueUsingTable.pos_X), &data[0], 8);
-			memcpy(&(valueUsingTable.pos_Y), &data[8], 8);
-			memcpy(&(valueUsingTable.pos_Z), &data[16], 8);
-			memcpy(&(valueUsingTable.pos_Yaw), &data[24], 8);
-			valueUsingTable.pos_number = valueUsingTable.pos_number + 1;
+			memcpy(&(valueUsingTable.position_info.x), &data[0], 8);
+			memcpy(&(valueUsingTable.position_info.y), &data[8], 8);
+			memcpy(&(valueUsingTable.position_info.z), &data[16], 8);
+			memcpy(&(valueUsingTable.position_info.yaw), &data[24], 8);
+			valueUsingTable.pos_count = valueUsingTable.pos_count + 1;
 			return MSG_ONPY_ME;
 		} else
 			return MSG_WRONG;
 
+	} else if (CMD_SET_FEATURE == at_cmd) {
+		// Care only move speed
+		// TODO: ...
+		return MSG_FORWARD;
+	// Emergency
+	} else if (CMD_EMERGENCY_STOP == at_cmd) {
+		if (LENGHT_CMD_EMERGENCY_STOP == lenght) {
+			mail->cmd_code 	= EMERGENCY;
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+	// Switch mode vehicle
+	} else if (CMD_SWITCH_MODE == at_cmd) {
+		if (LENGHT_CMD_SWITCH_MODE == lenght) {
+			mail->cmd_code 		= MODE_VEHICLE;
+			mail->mode_vehicle 	= data[0];
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+	// Auto move to target point
+	} else if (CMD_AUTO_MOVE == at_cmd) {
+		if (LENGHT_CMD_AUTO_MOVE == lenght) {
+			mail->cmd_code 	= MOVE_AUTO;
+			memcpy(&(mail->target_x), &data[2], 8);
+			memcpy(&(mail->target_y), &data[10], 8);
+			memcpy(&(mail->target_frame[0]), &data[0], lenght);
+ 			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+	// Auto hand rotate
+	} else if (CMD_AUTO_HAND == at_cmd) {
+		if (LENGHT_CMD_AUTO_HAND == lenght) {
+			mail->cmd_code 		= HAND_AUTO;
+			mail->hand_auto		= data[0];
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+	// Auto rotate vehicle
+	} else if (CMD_AUTO_ROTATE == at_cmd) {
+		if (LENGHT_CMD_AUTO_ROTATE == lenght) {
+			mail->cmd_code 	= AUTO_ROTATE;
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+	// Start auto moving
+	} else if (CMD_AUTO_START == at_cmd) {
+		if (LENGHT_CMD_AUTO_START == lenght) {
+			mail->cmd_code 	= AUTO_START;
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
+	// Stop auto moving
+	} else if (CMD_AUTO_STOP == at_cmd) {
+		if (LENGHT_CMD_AUTO_STOP == lenght) {
+			mail->cmd_code 	= AUTO_STOP;
+			return MSG_MAIL_TO_MAINTASK;
+		} else
+			return MSG_WRONG;
 	// Otherwise
 	} else {
 		return MSG_FORWARD;
 	}
 
 }
-
 
 enum_MessageClass_t AtSerial_HaldleArduino(uint8_t at_cmd,
 							uint8_t *data,
@@ -377,20 +433,20 @@ enum_MessageClass_t AtSerial_HaldleArduino(uint8_t at_cmd,
 	// Move
 	if (CMD_MOVE == at_cmd) {
 		if (LENGHT_CMD_MOVE == lenght) {
-			mail->cmd_code 	= MOVE;
+			mail->cmd_code 	= MOVE_MANUAL;
 			mail->move		= data[0];
 			return MSG_MAIL_TO_MAINTASK;
 		} else
 			return MSG_WRONG;
-	// Hand
+	// Hand Manual
 	} else if (CMD_HAND == at_cmd) {
 		if (LENGHT_CMD_HAND == lenght) {
-			mail->cmd_code 	= HAND;
-			mail->hand		= data[0];
+			mail->cmd_code 			= HAND_MANUAL;
+			mail->hand_manual		= data[0];
 			return MSG_MAIL_TO_MAINTASK;
 		} else
 			return MSG_WRONG;
-
+	// Worth Feature
 	} else if (CMD_SET_FEATURE == at_cmd) {
 		if (lenght >= 4) {
 			AtSerial_ReadFeatureArduino(data);
@@ -432,14 +488,25 @@ void	AtSerial_SetPowerMotion(uint8_t value) {
 }
 
 void	AtSerial_RequestPosition(void) {
-	uint8_t data = 0;
+	uint8_t data = 1;
 
-	AtSerial_PrepareCommand(&atSerialPi, CMD_POSITION_INFO, &data, 0, 0);
+	AtSerial_PrepareCommand(&atSerialPi, CMD_POSITION_INFO, &data, 0, 1);
 	serial_sendRasberryPi(&(atSerialPi.bufferWrite[0]), atSerialPi._sendByteCount);
 }
 
+void	AtSerial_ReportFinishTarget(uint8_t *data) {
+	AtSerial_PrepareCommand(&atSerialPi, CMD_AUTO_MOVE, data, 0, LENGHT_CMD_AUTO_MOVE);
+	serial_sendRasberryPi(&(atSerialPi.bufferWrite[0]), atSerialPi._sendByteCount);
+}
 
 void	AtSerial_ReportSensor(uint8_t nb_of_sensor, uint8_t value) {
 
 }
 
+uint32_t 	AtSerial_GetPositionCount(void) {
+	return valueUsingTable.pos_count;
+}
+
+void	AtSerial_GetPosition(Position_t *position) {
+	memcpy(position, &(valueUsingTable.position_info), sizeof(Position_t));
+}

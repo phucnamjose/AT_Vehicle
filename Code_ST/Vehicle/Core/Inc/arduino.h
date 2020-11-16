@@ -72,12 +72,28 @@ uint16_t ComputeChecksum2(uint16_t crc, uint8_t b);
 #define SEG_LEN_DATA_MAX 60
 //#pragma endregion
 
-// at command
+/* Parent command */
 #define CMD_MOVE			106
 #define CMD_HAND			107
 #define CMD_SET_FEATURE 	108
-#define CMD_POSITION_INFO	114
-
+#define CMD_POSITION_INFO	250
+#define CMD_EMERGENCY_STOP  130
+#define CMD_SWITCH_MODE  	131
+#define CMD_AUTO_MOVE  		132
+#define CMD_AUTO_HAND  		133
+#define CMD_AUTO_ROTATE 	134
+#define CMD_AUTO_START  	135
+#define CMD_AUTO_STOP  		136
+/* Child command */
+// Mode
+#define CMD_SWITCH_MODE_MANUAL  	1
+#define CMD_SWITCH_MODE_AUTO  		2
+// Auto hand
+#define CMD_AUTO_HAND_NONE  		0
+#define CMD_AUTO_HAND_RECTANGLE  	1
+#define CMD_AUTO_HAND_CIRCLE  		2
+// Feature
+#define CMD_SET_FEATURE_MOVESPEED = 3;
 #define CMD_SET_FEATURE_NHIET_DO_DO_AM 30
 #define CMD_SET_FEATURE_VAT_CAN_1 31
 #define CMD_SET_FEATURE_VAT_CAN_2 32
@@ -106,12 +122,19 @@ uint16_t ComputeChecksum2(uint16_t crc, uint8_t b);
 #define CMD_SET_FEATURE_DEN_BAO_2 72
 #define CMD_SET_FEATURE_DEN_BAO_3 73
 
-// lenght data according at command
-#define LENGHT_CMD_MOVE			3
-#define LENGHT_CMD_HAND			3
-#define LENGHT_CMD_SET_FEATURE 	11
+// Lenght data according to command
+#define LENGHT_CMD_MOVE				3
+#define LENGHT_CMD_HAND				3
+#define LENGHT_CMD_SET_FEATURE 		11
+#define LENGHT_CMD_EMERGENCY_STOP 	2
+#define LENGHT_CMD_SWITCH_MODE  	3
+#define LENGHT_CMD_AUTO_MOVE  		38
+#define LENGHT_CMD_AUTO_HAND  		1
+#define LENGHT_CMD_AUTO_ROTATE 		2
+#define LENGHT_CMD_AUTO_START  		2
+#define LENGHT_CMD_AUTO_STOP  		2
 
-// exact name
+// Exact name
 #define RELAY_MOTION_POW	CMD_SET_FEATURE_RELAY_8_KENH_4
 
 
@@ -161,15 +184,16 @@ typedef struct ValueUsing_t
 	uint8_t		ls_object_4;
 	uint8_t		ls_object_5;
 	uint8_t		ls_object_6;
-	float		pos_X;
-	float		pos_Y;
-	float		pos_Z;
-	float		pos_Yaw;
-	uint32_t	pos_number;
+	double		pos_X;
+	double		pos_Y;
+	double		pos_Z;
+	double		pos_Yaw;
+	uint32_t	pos_count;
+	Position_t	position_info;
+	float		speed_move;
 	// External write
 	uint8_t		relay_power_motion;
 } ValueUsing_t;
-
 
 
 /* Function Prototype */
@@ -194,9 +218,14 @@ enum_MessageClass_t AtSerial_HaldleArduino(uint8_t at_cmd,
 											int32_t lenght,
 											mainTaskMail_t *mail);
 
-void	AtSerial_ReadFeatureArduino(uint8_t *data);
-void	AtSerial_SetPowerMotion(uint8_t value);
-void	AtSerial_RequestPosition(void);
-void	AtSerial_ReportSensor(uint8_t nb_of_sensor, uint8_t value);
+void		AtSerial_ReadFeatureArduino(uint8_t *data);
+void		AtSerial_SetPowerMotion(uint8_t value);
+void		AtSerial_RequestPosition(void);
+void		AtSerial_ReportFinishTarget(uint8_t *data);
+void		AtSerial_ReportSensor(uint8_t nb_of_sensor, uint8_t value);
+
+uint32_t 	AtSerial_GetPositionCount(void);
+void		AtSerial_GetPosition(Position_t *position);
+
 
 #endif /* INC_ARDUINO_H_ */

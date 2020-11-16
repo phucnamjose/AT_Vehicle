@@ -85,15 +85,22 @@ double filter(double alpha, double x, double pre_x) {
 	return (1 - alpha)*x + alpha*pre_x;
 }
 
-/** @brief  : Convert m/s to round per minute
-**  @agr    : Input velocity in m/s from panel
-**  @retval : RPM value
+/** @brief  : Convert m/s to round per second
+**  @agr    : Input velocity in m/s from wheel
+**  @retval : RPS value
 **/
-double MPS2RPM(double vel)
+double MPS2RPS(double vel)
 {
-	return ((vel / (2 * PI * WHEEL_RADIUS)) * 60);
+	return ((vel / (2.0 * PI * WHEEL_RADIUS * RATIO_MOTOR_WHEEL)));
 }
 
+/** @brief  : Convert round per second to m/s
+**  @agr    : Input angular velocity from motor
+**  @retval : MPS value
+**/
+double	RPS2MPS(double vel) {
+	return (vel * 2.0 * PI * WHEEL_RADIUS * RATIO_MOTOR_WHEEL);
+}
 
 /** @brief  : Pi to Pi
 **  @agr    : input angle
@@ -102,9 +109,9 @@ double MPS2RPM(double vel)
 double Pi_To_Pi(double angle)
 {
 	if(angle > PI)
-		angle = angle - 2 * PI;
+		angle = angle - 2.0 * PI;
 	else if (angle < -PI)
-		angle = angle + 2 * PI;
+		angle = angle + 2.0 * PI;
 
 	return angle;
 }

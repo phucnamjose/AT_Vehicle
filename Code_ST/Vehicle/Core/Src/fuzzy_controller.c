@@ -6,10 +6,11 @@
  */
 
 #include "fuzzy_controller.h"
-#include "system_params.h"
 #include "def_myself.h"
+#include "system_params.h"
 
-IMU             Mag;
+Fuzzy_t	myFuzzy;
+
 /* Internal variables */
 double          NB, NM, NS, ZE, PS, PM, PB; // Sugeno output
 trimf           In1_NS, In1_ZE, In1_PS, In2_ZE;
@@ -92,8 +93,7 @@ void	Trapf_Update(trapf *ptrapf, double a1, double a2, double a3, double a4)
 **  @agr    : 3 parameters (left to right)
 **  @retval : Value relates to x
 **/
-void	Fuzzy_ParametersInit(void)
-{
+void	Fuzzy_Init(void) {
 	/*   Input 1 (e = Set_theta - theta)  */
 	// NB : -2 - -0.17
 	Trapf_Update(&In1_NB,-2,-1,-0.22,-0.17);
@@ -121,12 +121,20 @@ void	Fuzzy_ParametersInit(void)
 	PS = 0.4;
 	PM = 0.8;
 	PB = 0.95;
+
+	// Init factor
+	myFuzzy.Ke 		= FUZZY_KE;
+	myFuzzy.Kedot 	= FUZZY_KEDOT;
+	myFuzzy.Ku 		= FUZZY_KU;
+	myFuzzy.Fuzzy_Out 	= 0;
+	myFuzzy.Fuzzy_Error = 0;
+	myFuzzy.Fuzzy_Error_dot = 0;
 }
 
-void SelectFuzzyOutput(double vel)
+void Fuzzy_SelectFuzzyOutput(double vel)
 {
 	/*----------Fuzzy parameter init ------------------*/
-	if (vel < MPS2RPM(0.3))
+	if (vel < MPS2RPS(0.3))
 	{
 		/*   Input 1 (e = Set_theta - theta)  */
 		// NB :
@@ -188,8 +196,7 @@ void SelectFuzzyOutput(double vel)
 **  @agr    : 2 input value
 **  @retval : Output value
 **/
-double Defuzzification_Max_Min(double e, double edot)
-{
+double Fuzzy_Defuzzification_Max_Min(double e, double edot) {
 	double pBeta[3], num, den, temp;
 	double e_NB, e_NS, e_ZE, e_PS, e_PB, edot_NE, edot_ZE, edot_PO;
 	e_NB = Trapf(&In1_NB, e);
@@ -253,104 +260,26 @@ double Defuzzification_Max_Min(double e, double edot)
 	return (den == 0) ? 0 : (num/den);
 }
 
-//double Defuzzification2_Max_Min(double e, double edot)
-//{
-//	double pBeta[10], num, den;
-//	double e_NB, e_NS, e_ZE, e_PS, e_PB, edot_NE, edot_ZE, edot_PO;
-//	e_NB = Trapf(&In1_NB, e);
-//	e_NS = Trimf(&In1_NS, e);
-//	e_ZE = Trimf(&In1_ZE, e);
-//	e_PS = Trimf(&In1_PS, e);
-//	e_PB = Trapf(&In1_PB, e);
-//	edot_NE = Trapf(&In2_NE, edot);
-//	edot_ZE = Trimf(&In2_ZE, edot);
-//	edot_PO = Trapf(&In2_PO, edot);
-//	if(edot <= -0.4) // u_NE(edot) = 1
-//	{
-//		pBeta[0] = e_NB; // u_NB(e) -> output is NB
-//		pBeta[1] = e_NS; // u_NS(e) -> output is NM
-//		pBeta[2] = e_ZE; // u_ZE(e) -> output is NS
-//		pBeta[3] = e_PS; // u_PS(e) -> output is ZE
-//		pBeta[4] = e_PB; // u_PB(e) -> output is PS
-//		num = pBeta[0]*NB + pBeta[1]*NM + pBeta[2]*NS + pBeta[3]*ZE + pBeta[4]*PS;
-//		den = pBeta[0] + pBeta[1] + pBeta[2] + pBeta[3] + pBeta[4];
-//	}
-//	else if (edot < 0) // u_NE(edot) = trapf_NE(edot), u_ZE(edot) = trimf_ZE(edot)
-//	{
-//		/* u_NE(edot) = trapf_NE(edot) */
-//		pBeta[0] = Min(e_NB, edot_NE); // output is NB
-//		pBeta[1] = Min(e_NS, edot_NE); // output is NM
-//		pBeta[2] = Min(e_ZE, edot_NE); // output is NS
-//		pBeta[3] = Min(e_PS, edot_NE); // output is ZE
-//		pBeta[4] = Min(e_PB, edot_NE); // output is PS
-//		/* u_ZE(edot) = trimf_ZE(edot) */
-//		pBeta[5] = Min(e_NB, edot_ZE); // output is NM
-//		pBeta[6] = Min(e_NS, edot_ZE); // output is NS
-//		pBeta[7] = Min(e_ZE, edot_ZE); // output is ZE
-//		pBeta[8] = Min(e_PS, edot_ZE); // output is PS
-//		pBeta[9] = Min(e_PB, edot_ZE); // output is PM
-//		num = pBeta[0]*NB + Max(pBeta[1], pBeta[5])*NM + Max(pBeta[2], pBeta[6])*NS +
-//				Max(pBeta[3], pBeta[7])*ZE + Max(pBeta[4], pBeta[8])*PS + pBeta[9]*PM;
-//		den = pBeta[0] + pBeta[1] + pBeta[2] + pBeta[3] + pBeta[4] +
-//				pBeta[5] + pBeta[6] + pBeta[7] + pBeta[8] + pBeta[9];
-//	}
-//	else if (edot < 0.4) // u_ZE(edot) = trimf_ZE(edot), u_PO(edot) = trapf_PO(edot)
-//	{
-//		/* u_ZE(edot) = trimf_ZE(edot) */
-//		pBeta[0] = Min(e_NB, edot_ZE); // output is NM
-//		pBeta[1] = Min(e_NS, edot_ZE); // output is NS
-//		pBeta[2] = Min(e_ZE, edot_ZE); // output is ZE
-//		pBeta[3] = Min(e_PS, edot_ZE); // output is PS
-//		pBeta[4] = Min(e_PB, edot_ZE); // output is PM
-//		/* u_PO(edot) = trapf_PO(edot) */
-//		pBeta[5] = Min(e_NB, edot_PO); // output is NS
-//		pBeta[6] = Min(e_NS, edot_PO); // output is ZE
-//		pBeta[7] = Min(e_ZE, edot_PO); // output is PS
-//		pBeta[8] = Min(e_PS, edot_PO); // output is PM
-//		pBeta[9] = Min(e_PB, edot_PO); // output is PB
-//		num = pBeta[0]*NM + Max(pBeta[1], pBeta[5])*NS + Max(pBeta[2], pBeta[6])*ZE +
-//				Max(pBeta[3], pBeta[7])*PS + Max(pBeta[4], pBeta[8])*PM + pBeta[9]*PB;
-//		den = pBeta[0] + pBeta[1] + pBeta[2] + pBeta[3] + pBeta[4] +
-//				pBeta[5] + pBeta[6] + pBeta[7] + pBeta[8] + pBeta[9];
-//	}
-//	else // u_PO(edot) = 1
-//	{
-//		pBeta[0] = e_NB; // u_NB(e) -> output is NS
-//		pBeta[1] = e_NS; // u_NS(e) -> output is ZE
-//		pBeta[2] = e_ZE; // u_ZE(e) -> output is PS
-//		pBeta[3] = e_PS; // u_PS(e) -> output is PM
-//		pBeta[4] = e_PB; // u_PB(e) -> output is PB
-//		num = pBeta[0]*NS + pBeta[1]*ZE + pBeta[2]*PS + pBeta[3]*PM + pBeta[4]*PB;
-//		den = pBeta[0] + pBeta[1] + pBeta[2] + pBeta[3] + pBeta[4];
-//	}
-//	return (den == 0) ? 0 : (num/den);
-//}
 
+void	Fuzzy_UpdateInput(Fuzzy_t *fuzzy) {
+	fuzzy->Fuzzy_Error = fuzzy->Set_Angle - fuzzy->Angle;
+	fuzzy->Fuzzy_Error_dot = -(fuzzy->Angle - fuzzy->Pre_Angle) / (5*BASIC_PERIOD);
+	fuzzy->Pre_Angle = fuzzy->Angle;
+	fuzzy->Pre_Fuzzy_Out = fuzzy->Fuzzy_Out;
 
-void	IMU_UpdateFuzzyInput(IMU *pimu)
-{
-	pimu->Fuzzy_Error = pimu->Set_Angle - pimu->Angle;
-	pimu->Fuzzy_Error_dot = -(pimu->Angle - pimu->Pre_Angle) / (5*BASIC_PERIOD);
-	pimu->Pre_Angle = pimu->Angle;
-	pimu->Pre_Fuzzy_Out = pimu->Fuzzy_Out;
+	fuzzy->Fuzzy_Error = Pi_To_Pi(fuzzy->Fuzzy_Error);
 
-	if(pimu->Fuzzy_Error > 180)
-		pimu->Fuzzy_Error -= 360;
-	else if(pimu->Fuzzy_Error < -180)
-		pimu->Fuzzy_Error += 360;
-
-	pimu->Fuzzy_Error *= pimu->Ke;
-	pimu->Fuzzy_Error_dot *= pimu->Kedot;
+	fuzzy->Fuzzy_Error *= fuzzy->Ke;
+	fuzzy->Fuzzy_Error_dot *= fuzzy->Kedot;
 }
 
 /** @brief  : Update fuzzy coefficients
-**  @agr    : imu and Ke,kedot,ku
+**  @agr    : imu and Ke, kedot, ku
 **  @retval : none
 **/
-void	IMU_UpdateFuzzyCoefficients(IMU *pimu, double Ke, double Kedot, double Ku)
-{
-	pimu->Ke	= Ke;
-	pimu->Kedot = Kedot;
-	pimu->Ku 	= Ku;
+void	Fuzzy_UpdateCoefficients(Fuzzy_t *fuzzy, double Ke, double Kedot, double Ku) {
+	fuzzy->Ke	= Ke;
+	fuzzy->Kedot = Kedot;
+	fuzzy->Ku 	= Ku;
 }
 

@@ -8,6 +8,13 @@
 #ifndef INC_FUZZY_CONTROLLER_H_
 #define INC_FUZZY_CONTROLLER_H_
 
+
+#include "def_myself.h"
+
+#define FUZZY_KE		(1/PI)
+#define FUZZY_KEDOT		(6/PI)
+#define FUZZY_KU		(1)
+
 typedef struct trimf{
 	double a1;
 	double a2;
@@ -23,7 +30,7 @@ typedef struct trapf {
 } trapf;
 
 
-typedef struct IMU {
+typedef struct Fuzzy_t {
 	/* Current Angle and Set Angle */
 	double      Angle;
 	double      Set_Angle;
@@ -37,23 +44,22 @@ typedef struct IMU {
 	double      Ke;
 	double      Kedot;
 	double      Ku;
-} IMU;
+} Fuzzy_t;
 
 /*--------Fuzzy control-------------------*/
 #define Min(a, b)		((a) < (b)) ? (a) : (b)
 #define Max(a, b)		((a) < (b)) ? (b) : (a)
 #define Prod(a, b)		((a) * (b))
 
-void                    Fuzzy_ParametersInit(void);
+void                    Fuzzy_Init(void);
 double                  Trapf(trapf *ptrapf, double x);
 double                  Trimf(trimf *ptrimf, double x);
 void                    Trimf_Update(trimf *ptrimf, double a1, double a2, double a3);
 void                    Trapf_Update(trapf *ptrapf, double a1, double a2, double a3, double a4);
-double                  Defuzzification_Max_Min(double e, double edot);
-//double                  Defuzzification2_Max_Min(double e, double edot);
-
-/*--------IMU functions ---------*/
-void                    IMU_UpdateFuzzyInput(IMU *pimu);
-void                    IMU_UpdateFuzzyCoefficients(IMU *pimu, double Ke, double Kedot, double Ku);
+double                  Fuzzy_Defuzzification_Max_Min(double e, double edot);
+//double                Defuzzification2_Max_Min(double e, double edot);
+void                    Fuzzy_UpdateInput(Fuzzy_t *fuzzy);
+void                    Fuzzy_UpdateCoefficients(Fuzzy_t *fuzzy, double Ke, double Kedot, double Ku);
+void 					Fuzzy_SelectOutput(double vel);
 
 #endif /* INC_FUZZY_CONTROLLER_H_ */

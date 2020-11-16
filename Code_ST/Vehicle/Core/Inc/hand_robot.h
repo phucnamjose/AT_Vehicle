@@ -9,30 +9,22 @@
 #define INC_HAND_ROBOT_H_
 
 #include "def_myself.h"
+#include "trajectory.h"
 
+typedef enum enum_StateScanHard{
+	SCAN_HARD_UP = 0,
+	SCAN_HARD_DOWN,
+	SCAN_HARD_DONE
+}enum_StateHard;
 
-typedef struct Trajectory_t
-{
-	int8_t			 dir;
-	double			 s0;
-	double 			 s1;
-	double			 v0;
-	double			 v1;
-	double 			 v_design;
-	double 			 a_design;
-	double			 v_lim;
-	double			 Ta;
-	double			 Td;
-	double			 Tf;
-	uint32_t		 num_of_sampling;
-	double			 total_s;
-	double			 a_current;
-	double			 v_current;
-	double			 s_current;
+typedef enum enum_StateScan{
+	SCAN_STEP_INIT = 0,
+	SCAN_STEP_HARD,
+	SCAN_STEP_SOFT,
+	SCAN_STEP_FINISH
+}enum_StateScan;
 
-}Trajectory_t;
-
-
+/* Object form*/
 typedef struct Hand_Duty_t
 {
 	Trajectory_t	trajec[2];
@@ -40,10 +32,35 @@ typedef struct Hand_Duty_t
 	double			time_total;
 }Hand_Duty_t;
 
+typedef struct Hand_t
+{
+	// Scan word
+	enum_StateScan 	state_scan;
+	enum_StateHard	state_hard;
+	uint8_t			is_scanned;
+	// Position
+	double			offset_up;
+	double			offset_down;
+	double			theta_up;
+	double			theta_down;
+	// Limit
+	double			lim_neg_up;
+	double			lim_neg_down;
+	double			lim_pos_down;
+	// Duty
+	Hand_Duty_t		duty;
+}Hand_t;
 
 
-void 	Hand_ScanJointUp(void);
-void 	Hand_ScanJointDown(void);
+/* Function prototypes */
+void	Hand_Init(void);
+uint8_t	Hand_Scan(void);
+uint8_t	Hand_ScanHard(void);
+uint8_t Hand_GoToSoftLim(void);
+uint8_t	Hand_IsScanned(void);
+
+void	Hand_GoHome(void);
+
 void 	Hand_Stop(void);
 void 	Hand_Up(void);
 void 	Hand_Down(void);
@@ -52,11 +69,5 @@ void 	Hand_Right(void);
 
 void	Hand_UpdateTruePositon(void);
 void	Hand_ExcuteNewPosition(void);
-
-uint8_t	Hand_InitLSPB(Trajectory_t *lspb,
-					double total_s,
-					double v_factor,
-					double a_factor);
-uint8_t	Hand_FlowLSPB(Trajectory_t *lspb, double time);
 
 #endif /* INC_HAND_ROBOT_H_ */

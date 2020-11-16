@@ -15,7 +15,9 @@
 #include "arduino.h"
 #include "vehicle_overall.h"
 #include "main.h"
-//#include "MPU9250.h"
+#include "pid_heading.h"
+#include "step_motor.h"
+#include "hand_robot.h"
 
 /* External variable*/
 // Peripherals MCU
@@ -26,22 +28,25 @@ extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim9;
-
-
 // User
-//extern float roll,yaw,pitch;
-//extern float q0, q1, q2, q3;
-extern DcServo_t MR;
-extern DcServo_t ML;
-extern PID_t pid_MR;
-extern PID_t pid_ML;
-extern osMailQId mainTaskMailHandle;
-extern ValueUsing_t valueUsingTable;
+extern DcServo_t 		MR;
+extern DcServo_t 		ML;
+extern PID_t 			pid_MR;
+extern PID_t 			pid_ML;
+extern Vehicle_t 		myVehicle;
+extern Step_t			stepDown;
+extern Step_t			stepUp;
+extern Hand_t			myHand;
+extern osMailQId 		mainTaskMailHandle;
+extern ValueUsing_t 	valueUsingTable;
 
 /* Internal variable*/
-// USB
-uint8_t 		count;
-uint8_t			count_imu;
+// Counter
+uint8_t 		count_report;
+uint8_t			count_auto_run;
+uint8_t			count_lidar;
+uint8_t			count_read_head;
+// Buffer
 uint8_t 		usb_out_buff[200];
 uint8_t			pi_out_buff[200];
 uint8_t 		setR[20];
@@ -51,11 +56,8 @@ uint8_t			fbackL[20];
 uint8_t 		kp_buff[20];
 uint8_t 		ki_buff[20];
 uint8_t 		kd_buff[20];
-uint8_t 		roll_buff[20];
-uint8_t 		pitch_buff[20];
+uint8_t 		v_buff[20];
 uint8_t 		yaw_buff[20];
-uint8_t			quar_buff[20];
-
 // Mail
 mainTaskMail_t 	command;
 mainTaskMail_t 	*mail;
@@ -64,8 +66,8 @@ uint8_t			is_new_command;
 // State
 uint8_t			Execute_flag;
 uint8_t			Run_PID_flag;
-uint8_t			Send_PID_flag;
 uint8_t			Report_flag;
+uint8_t			Read_heading_flag;
 
 /* Implementation*/
 
@@ -83,36 +85,23 @@ void setupMainThread(void) {
 	// Init DcServo motor and PID controller
 	DcServoInit(&MR, 1, 1, TIM2, TIM3);
 	DcServoInit(&ML, 0, 0, TIM1, TIM4);
-	PID_Reset(&pid_MR);
-	PID_Reset(&pid_ML);
-	PID_SetFactor(&pid_MR,
-			PID_DEFAULT_RIGHT_KP,
-			PID_DEFAULT_RIGHT_KI,
-			PID_DEFAULT_RIGHT_KD);
-	PID_SetFactor(&pid_ML,
-			PID_DEFAULT_LEFT_KP,
-			PID_DEFAULT_LEFT_KI,
-			PID_DEFAULT_LEFT_KD);
+	PID_Init();
 	// Stop motor
 	DcStopMotor(&MR);
 	DcStopMotor(&ML);
-
-	//Init IMU
-//	init_IMU();
-//	init_magnetometer();
-//	if (Check_Connection(0x71) == TRUE) {
-//		Calibration_IMU();
-//		HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_RESET);
-//		osDelay(1000);
-//		HAL_GPIO_WritePin(LED_D4_GPIO_Port, LED_D4_Pin, GPIO_PIN_SET);
-//	} else {
-//		uint8_t err[40] = "IMU Init FAIL..........\n";
-//		CDC_Transmit_FS(err, strlen((const char *)err));
-//	}
+	// Init vehicle
+	Vehicle_Init();
+	// Init Stepper motor and Hand
+	StepInit(&stepUp, 0, 3, TIM5);
+	StepInit(&stepDown, 0, 3, TIM9);
+	Hand_Init();
+	// Turn power
+	AtSerial_SetPowerMotion(1);
 	// Init state
-	Run_PID_flag 	= FALSE;
-	Execute_flag 	= FALSE;
-	Send_PID_flag 	= FALSE;
+	Run_PID_flag 	= TRUE;
+	Execute_flag 	= TRUE;
+	Report_flag		= FALSE;
+	Read_heading_flag = FALSE;
 	// Start timer for basic period
 	HAL_TIM_Base_Start_IT(&htim7);
 }
@@ -121,36 +110,59 @@ void setupMainThread(void) {
 void loopMainThread(void) {
 	// 1.Clear usb buffer
 	memset(usb_out_buff, 0, sizeof(usb_out_buff));
-	memset(usb_out_buff, 0, sizeof(pi_out_buff));
-	// 2.Read IMU
-//	Process_IMU();
-//	count_imu++;
-//	if (count_imu == 10) {
-//		count_imu = 0;
-//		double2string(roll_buff, roll, 6);
-//		double2string(pitch_buff, pitch, 6);
-//		double2string(yaw_buff, yaw, 6);
-//		//double2string(quar_buff, q3, 6);
-//		char orientation[50];
-//		snprintf(orientation, 50, "%s %s %s\n", roll_buff, pitch_buff, yaw_buff);
-//		strcat((char *)usb_out_buff, orientation);
-//	}
-
-	// 3.Update velocity
+	// 2.Update velocity
 	DcVelUpdate(&MR);
 	DcVelUpdate(&ML);
-
-	// 4.Run PID
+	// 3.Run PID
 	if (Run_PID_flag) {
 		//PID_RunBlackBox(&pid_ML, &ML);
 		PID_Compute(&pid_MR, &MR);
 		PID_Compute(&pid_ML, &ML);
 	}
-
-	// 5.Execute Output
+	// 4.Execute Output
 	if (Execute_flag) {
 		DcExecuteOuput(&MR);
 		DcExecuteOuput(&ML);
+	}
+	// 5.Run According to Mode Vehicle
+	switch (myVehicle.mode_vehicle) {
+		case MODE_MANUAL:
+			Vehicle_CheckManualTimeOut();
+			break;
+
+		case MODE_AUTO:
+			Vehicle_Odometry();
+			count_lidar++;
+			// Prepare position to the next time
+			if (count_lidar == 1) {
+				AtSerial_RequestPosition();
+			} else if (count_lidar == 5) {
+				// Reset count_lidar
+				count_lidar = 0;
+				// Check new position frame from Lidar and read
+				uint32_t position_count = AtSerial_GetPositionCount();
+				if (position_count != myVehicle.position_lidar_count) {
+					AtSerial_GetPosition(&(myVehicle.position_lidar));
+					myVehicle.position_lidar_count = position_count;
+					Vehicle_EstimatePosition(TRUE);
+				} else {
+					// Estimate without IMU, max 5 times. >5 --> Error
+					Vehicle_EstimatePosition(FALSE);
+				}
+
+//				if (Head_IsRun()) {
+//					Head_RunBlackBox();
+//					Head_PushSample(myVehicle.position_center_veh.yaw);
+//				}
+
+				// Run test fuzzy first
+
+
+				Vehicle_AutoRunState();
+			}
+			break;
+		default:
+			break;
 	}
 
 	// 6.Check mail
@@ -162,7 +174,6 @@ void loopMainThread(void) {
 		osMailFree(mainTaskMailHandle, mail);
 		is_new_command = TRUE;
 	}
-
 	// 7.Check new command
 	if (is_new_command) {
 		decisionAccordingCmd(command);
@@ -170,55 +181,88 @@ void loopMainThread(void) {
 		is_new_command = FALSE;
 	}
 
+	//StepWritePusle(&stepUp, 100, &stepDown, 100);
+
+	// Report heading sample
+	if (Read_heading_flag) {
+		double v_output, head_respond;
+		v_output = Head_PopOutput(count_read_head);
+		head_respond = Head_PopSample(count_read_head);
+		count_read_head++;
+
+		double2string(v_buff, v_output, 6);
+		double2string(yaw_buff, head_respond, 6);
+		// Send through USB
+		char feedback[30];
+		snprintf(feedback, 30, "%d %s %s\n",(int)count_read_head, v_buff, yaw_buff);
+		strcat((char *)usb_out_buff, feedback);
+
+		if (count_read_head == 200)
+			Read_heading_flag = FALSE;
+	}
+
 	// 8.Report per 100ms
 	if (Report_flag) {
-		count++;
-		if (count == 10) {
-			double v_lelf;
-			double v_right;
-			double sp_left;
-			double sp_right;
+		count_report++;
+		if (count_report == 10) {
+			// Reset count report
+			count_report = 0;
+
+//			//System identify BEGIN -----------------------------------------
 //			double out_left;
 //			double out_right;
 //			int32_t pid_count;
-			// Get setpoint and feedback
+//			// Get setpoint and feedback
 //			pid_count 	= PID_GetCount(&pid_ML);
-
-			v_right		= DcGetVel(&MR);
-			v_lelf	 	= DcGetVel(&ML);
-			sp_right	= PID_GetSetpoint(&pid_MR);
-			sp_left		= PID_GetSetpoint(&pid_ML);
-
-			//sp_right	= PID_GetOutput(&pid_MR);
 //			out_left		= PID_GetOutput(&pid_ML);
 //			out_right		= PID_GetOutput(&pid_MR);
-
-			// Convert to string
-			double2string(fbackR, v_right, 6);
-			double2string(fbackL, v_lelf, 6);
-			double2string(setR, sp_right, 6);
-			double2string(setL, sp_left, 6);
 //			double2string(setR, out_right, 6);
 //			double2string(setL, out_left, 6);
-
-			char feedback[30];
-			snprintf(feedback, 30, "%s %s\n", fbackR, fbackL);
-			strcat((char *)usb_out_buff, feedback);
-
-			char fb_and_sp[60];
-			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\r\n",
-					fbackR, fbackL, setR, setL);
-
 //			char fb_and_output[60];
 //			int32_t len_pi = snprintf(fb_and_output, 60, "%d %s %s\r\n",
 //								 (int)pid_count, fbackL, setL);
-
-
-			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
 //			if (pid_count == 0)
 //				Report_flag = FALSE;
-			// Reset count
-			count = 0;
+//			//System identify END ------------------------------------------
+
+
+//			//Report Servo respond BEGIN -----------------------------------------
+//			double v_lelf;
+//			double v_right;
+//			double sp_left;
+//			double sp_right;
+//			v_right		= DcGetVel(&MR);
+//			v_lelf	 	= DcGetVel(&ML);
+//			sp_right	= PID_GetSetpoint(&pid_MR);
+//			sp_left		= PID_GetSetpoint(&pid_ML);
+//			// Convert to string
+//			double2string(fbackR, v_right, 6);
+//			double2string(fbackL, v_lelf, 6);
+//			double2string(setR, sp_right, 6);
+//			double2string(setL, sp_left, 6);
+//			// Send through USB
+//			char feedback[30];
+//			snprintf(feedback, 30, "%s %s\n", fbackR, fbackL);
+//			strcat((char *)usb_out_buff, feedback);
+//			// Send through UART
+//			char fb_and_sp[60];
+//			int32_t len_pi = snprintf(fb_and_sp, 60, "%s %s %s %s\r\n",
+//					fbackR, fbackL, setR, setL);
+//			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
+//			//Report Servo respond END ------------------------------------------
+
+
+//			//Report Limit Switch BEGIN ------------------------------------------
+//			uint8_t ls_up, ls_down_left, ls_down_right;
+//			StepReadLimit(&stepUp, &stepDown);
+//			ls_up = stepUp.limit_negative;
+//			ls_down_left = stepDown.limit_negative;
+//			ls_down_right = stepDown.limit_positive;
+//			// Send through USB
+//			char feedback[30];
+//			snprintf(feedback, 30, "%d %d %d\n", (int)ls_up, (int)ls_down_left, (int)ls_down_right);
+//			strcat((char *)usb_out_buff, feedback);
+//			//Report Limit Switch END ------------------------------------------
 		}
 	}
 	// 9. Check usb buff and send
@@ -244,7 +288,6 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 		case START:
 			Run_PID_flag 	= TRUE;
 			Execute_flag	= TRUE;
-			//PID_StartBlackBox(&pid_ML);
 			strcat((char *)usb_out_buff, "Started EXE\n");
 			break;
 		case STOP:
@@ -285,9 +328,8 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			PID_Reset(&pid_ML);
 			strcat((char *)usb_out_buff, "RESET PID\n");
 			break;
-		case MOVE:
-			// Move file
-			moveVehicle(cmd.move);
+		case MOVE_MANUAL:
+			moveManualVehicle(cmd.move);
 			break;
 		case REPORT_ON:
 			Report_flag = TRUE;
@@ -300,83 +342,134 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			DcSetOuput(&ML, cmd.L_output);
 			strcat((char *)usb_out_buff, "Changed OUTPUT\n");
 			break;
-		case POWER_ON:
-			AtSerial_SetPowerMotion(1);
-			strcat((char *)usb_out_buff, "Turned on POWER\n");
+		case HAND_MANUAL:
+			// TODO:
 			break;
-		case POWER_OFF:
-			AtSerial_SetPowerMotion(0);
-			strcat((char *)usb_out_buff, "Turned off POWER\n");
+		case GET_SAMPLE:
+			Read_heading_flag = TRUE;
+			break;
+		case MODE_VEHICLE:
+			Vehicle_ChangeMode(cmd.mode_vehicle);
+			strcat((char *)usb_out_buff, "Changed MODE\n");
+			break;
+		case MOVE_AUTO:
+			moveAutoVehicle(cmd.target_x, cmd.target_y, cmd.target_frame);
+			break;
+		case SPEED_MOVE:
+			Vehicle_ChangeSpeed(cmd.speed_move);
+			strcat((char *)usb_out_buff, "Changed SPEED\n");
+			break;
+		case EMERGENCY:
+			// TODO:
+			break;
+		case HAND_AUTO:
+			// TODO:
+			break;
+		case AUTO_START:
+			autoStart();
+			break;
+		case AUTO_STOP:
+			autoStop();
+			break;
+		case AUTO_ROTATE:
+			// TODO:
 			break;
 		default:
 			break;
 	}
 }
 
-void moveVehicle(enum_Move move_type) {
+uint8_t moveManualVehicle(enum_MoveManual move_type) {
+
+	// Check mode
+	if (MODE_AUTO == myVehicle.mode_vehicle)
+		return FALSE;
+	// Right mode
 	switch (move_type) {
 		case STOP_VEHICLE:
-//			DcStopMotor(&MR);
-//			DcStopMotor(&ML);
 			Vehicle_Stop();
-			Run_PID_flag 	= FALSE;
-			Execute_flag	= FALSE;
-			strcat((char *)usb_out_buff, "STOP\n");
+			//strcat((char *)usb_out_buff, "STOP\n");
 			break;
 		case FORWARD:
 			Vehicle_Forward();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "FORWARD\n");
+			//strcat((char *)usb_out_buff, "FORWARD\n");
 			break;
 		case BACKWARD:
 			Vehicle_Backward();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "BACKWARD\n");
+			//strcat((char *)usb_out_buff, "BACKWARD\n");
 			break;
 		case ROTATE_LEFT:
 			Vehicle_RotLeft();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "ROTATE LEFT\n");
+			//strcat((char *)usb_out_buff, "ROTATE LEFT\n");
 			break;
 		case ROTATE_RIGHT:
 			Vehicle_RotRight();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "ROTATE RIGHT\n");
+			//strcat((char *)usb_out_buff, "ROTATE RIGHT\n");
 			break;
 		case FORWARD_LEFT:
 			Vehicle_ForwardLeft();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "FORWARD-LEFT\n");
+			//strcat((char *)usb_out_buff, "FORWARD-LEFT\n");
 			break;
 		case FORWARD_RIGHT:
 			Vehicle_ForwardRight();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "FORWARD-RIGHT\n");
+			//strcat((char *)usb_out_buff, "FORWARD-RIGHT\n");
 			break;
 		case BACKWARD_LEFT:
 			Vehicle_BackwardLeft();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "BACKWARD-LEFT\n");
+			//strcat((char *)usb_out_buff, "BACKWARD-LEFT\n");
 			break;
 		case BACKWARD_RIGHT:
 			Vehicle_BackwardRight();
-			Run_PID_flag 	= TRUE;
-			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "BACKWARD-RIGHT\n");
+			//strcat((char *)usb_out_buff, "BACKWARD-RIGHT\n");
 			break;
 		default:
 			break;
 	}
+	return TRUE;
 }
 
-void handRobot(enum_Hand hand_type) {
+uint8_t moveAutoVehicle(double x, double y, uint8_t *target_data) {
+	// Check mode
+	if (MODE_MANUAL == myVehicle.mode_vehicle)
+		return FALSE;
+
+	if (AUTO_RUN_IDLE == myVehicle.state_auto_run
+			|| AUTO_RUN_WAIT_START == myVehicle.state_auto_run) {
+		Vehicle_AutoNewTarget(x, y, target_data);
+		return TRUE;
+	} else
+		return FALSE;
+}
+
+uint8_t	autoStart(void) {
+	// Check mode
+	if (MODE_MANUAL == myVehicle.mode_vehicle)
+		return FALSE;
+
+	if (AUTO_RUN_WAIT_START == myVehicle.state_auto_run) {
+		Vehicle_AutoStart();
+		return TRUE;
+	} else
+		return FALSE;
+}
+
+uint8_t	autoStop(void) {
+	// Check mode
+	if (MODE_MANUAL == myVehicle.mode_vehicle)
+		return FALSE;
+
+	if (AUTO_RUN_MOVING == myVehicle.state_auto_run) {
+		Vehicle_AutoStop();
+		return TRUE;
+	} else
+		return FALSE;
+}
+
+void 	handManualRobot(enum_HandManual hand_manual) {
+
+}
+
+void 	handAutoRobot(enum_HandManual hand_manual) {
 
 }
 

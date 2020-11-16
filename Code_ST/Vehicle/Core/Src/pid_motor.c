@@ -13,6 +13,18 @@ PID_t	pid_MR;
 PID_t	pid_ML;
 
 /* Implementation */
+void	PID_Init() {
+	PID_Reset(&pid_MR);
+	PID_Reset(&pid_ML);
+	PID_SetFactor(&pid_MR,
+			PID_DEFAULT_RIGHT_KP,
+			PID_DEFAULT_RIGHT_KI,
+			PID_DEFAULT_RIGHT_KD);
+	PID_SetFactor(&pid_ML,
+			PID_DEFAULT_LEFT_KP,
+			PID_DEFAULT_LEFT_KI,
+			PID_DEFAULT_LEFT_KD);
+}
 
 void PID_Reset(PID_t *pid) {
 	// Reset
@@ -56,7 +68,7 @@ void PID_Compute(PID_t *pid, DcServo_t *motor) {
 }
 
 void PID_Setpoint(PID_t *pid, double setpoint) {
-	if (setpoint >= -1.5 && setpoint <= 1.5) {
+	if (setpoint >= -2.1 && setpoint <= 2.1) {
 		pid->v_setpoint = setpoint;
 	}
 }
@@ -76,8 +88,6 @@ void	PID_GetFactor(PID_t *pid, double *kp, double *ki, double *kd) {
 	*ki = pid->Ki;
 	*kd = pid->Kd;
 }
-
-
 
 void	PID_TestSquareWave(PID_t *pid, DcServo_t *motor) {
 	pid->count++;

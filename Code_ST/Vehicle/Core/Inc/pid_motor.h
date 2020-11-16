@@ -37,6 +37,7 @@ typedef struct PID_t
 }PID_t;
 
 /* Function Prototype */
+void	PID_Init();
 void 	PID_Reset(PID_t *pid);
 void 	PID_Compute(PID_t *pid, DcServo_t *motor);
 void 	PID_Setpoint(PID_t *pid, double setpoint);

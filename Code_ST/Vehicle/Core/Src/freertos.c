@@ -163,8 +163,11 @@ void StartMainTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  osSignalWait(0x01, osWaitForever); // TIM7 generate basic period
-	  loopMainThread();
+	  for(;;) {
+		  osSignalWait(0x01, osWaitForever); // TIM7 generate basic period
+		  loopMainThread();
+	  }
+	  // Never go to this
     osDelay(1);
   }
   /* USER CODE END StartMainTask */
@@ -204,7 +207,11 @@ void StartRasTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  loopRasberryThread();
+	  for (;;) {
+		  loopRasberryThread();
+		  osThreadYield();
+	  }
+	  // Never go to this
     osDelay(1);
   }
   /* USER CODE END StartRasTask */
@@ -224,7 +231,7 @@ void StartArduinoTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  loopArduinoThread();
+	 loopArduinoThread();
     osDelay(1);
   }
   /* USER CODE END StartArduinoTask */

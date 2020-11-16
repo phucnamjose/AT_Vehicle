@@ -22,8 +22,7 @@ const char *DebugCmd_Code[]  = {"SETSPT",
 								"REPOFF",
 								"OUTPUT",
 								"SETHAN",
-								"POWONN",
-								"POWOFF"};
+								"GETSAM"};
 
 /* Implementation*/
 
@@ -86,11 +85,11 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 		return RESET_PID;
 
 		// 8. Move vehicle
-	} else if ( 0 == strcmp(command, DebugCmd_Code[MOVE])) {
+	} else if ( 0 == strcmp(command, DebugCmd_Code[MOVE_MANUAL])) {
 		lenght = sscanf(para, "%d", (int *)&(arguments->move));
 		if (lenght == 1) {
-			arguments->cmd_code = MOVE;
-			return MOVE;
+			arguments->cmd_code = MOVE_MANUAL;
+			return MOVE_MANUAL;
 		} else
 			return CMD_NONE;
 		// 9. Turn on report velocity
@@ -111,14 +110,10 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			return SET_OUTPUT;
 		} else
 			return CMD_NONE;
-		// 12. Turn on motion power
-	} else if ( 0 == strcmp(command, DebugCmd_Code[POWER_ON])) {
-			arguments->cmd_code = POWER_ON;
-			return POWER_ON;
-		// 13. Turn off motion power
-	} else if ( 0 == strcmp(command, DebugCmd_Code[POWER_OFF])) {
-			arguments->cmd_code = POWER_OFF;
-			return POWER_OFF;
+		// 12. Get heading sample
+	} else if ( 0 == strcmp(command, DebugCmd_Code[GET_SAMPLE])) {
+		arguments->cmd_code = GET_SAMPLE;
+		return GET_SAMPLE;
 
 		// Wrong code
 	} else {
