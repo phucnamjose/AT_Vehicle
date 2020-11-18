@@ -14,13 +14,6 @@
 #define FALSE	(0)
 #define TRUE	(1)
 
-
-typedef enum
-{
-	Check_NOK = 0,
-	Check_OK = 1,
-}enum_Status;
-
 // Pi constant
 #define PI		(3.14159265359f)
 

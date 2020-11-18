@@ -357,7 +357,7 @@ enum_MessageClass_t AtSerial_HaldleComputer(uint8_t at_cmd,
 			memcpy(&(valueUsingTable.position_info.z), &data[16], 8);
 			memcpy(&(valueUsingTable.position_info.yaw), &data[24], 8);
 			valueUsingTable.pos_count = valueUsingTable.pos_count + 1;
-			return MSG_ONPY_ME;
+			return MSG_ONLY_ME;
 		} else
 			return MSG_WRONG;
 

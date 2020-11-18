@@ -26,15 +26,17 @@ typedef	enum enum_DebugCmd{
 	SET_OUTPUT,			// 11. Set output 2 Wheel
 	HAND_MANUAL,		// 12. Hand robot manual
 	GET_SAMPLE,			// 13. Read sample angular
+	RESET_ODOMETRY,		// 14. Reset odometry intergrate
+	COPY_LIDAR_2_ODO,	// 15. Copy lidar position to odometry position
 
-	MODE_VEHICLE,		// 14. Change mode vehicle
-	MOVE_AUTO,			// 15. Start - stop auto run
-	SPEED_MOVE,			// 16. Change speed move
-	EMERGENCY,			// 17. Stop move and hand
-	HAND_AUTO,			// 18. Hand robot auto
-	AUTO_START,			// 19. Start auto moving
-	AUTO_STOP,			// 20. Stop auto moving
-	AUTO_ROTATE			// 21. Rotate forever
+	MODE_VEHICLE,		// 16. Change mode vehicle
+	MOVE_AUTO,			// 17. Start - stop auto run
+	SPEED_MOVE,			// 18. Change speed move
+	EMERGENCY,			// 19. Stop move and hand
+	HAND_AUTO,			// 20. Hand robot auto
+	AUTO_START,			// 21. Start auto moving
+	AUTO_STOP,			// 22. Stop auto moving
+	AUTO_ROTATE			// 23. Rotate forever
 }enum_DebugCmd;
 
 typedef	enum enum_MoveManual{

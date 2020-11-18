@@ -71,7 +71,7 @@ uint8_t	StepWritePusle(Step_t *step_up, int8_t pulse_up, Step_t *step_down, int8
 		step_up->TIM_PULSE->CCR1 = MAX_TIMER_COUNT;//Compare > AutoLoad=No pulse
 	} else {
 		uint16_t period_up = MAX_TIMER_COUNT/pulse_up_abs;
-		uint16_t compare_up = period_up*7/10; // duty 70%
+		uint16_t compare_up = period_up*5/10; // duty 50%
 		step_up->TIM_PULSE->ARR = period_up - 1;
 		step_up->TIM_PULSE->CCR1 = compare_up;
 	}

@@ -8,7 +8,7 @@
 
 #include "pid_motor.h"
 
-/* Global variables*/
+/* Internal variables*/
 PID_t	pid_MR;
 PID_t	pid_ML;
 

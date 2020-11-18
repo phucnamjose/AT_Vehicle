@@ -46,12 +46,11 @@ void loopArduinoThread(void) {
 		// Classify
 		switch (msg_classify) {
 			case MSG_WRONG:
-			case MSG_ONPY_ME:
+			case MSG_ONLY_ME:
 				break;
 			case MSG_FORWARD:
 				serial_sendRasberryPi(&(atSerialMega._serialRecvBytes[0]),
 									atSerialMega._segmentLength);
-				__NOP();
 				break;
 			case MSG_MAIL_TO_MAINTASK:
 				mainTask_SendMail(&cmd_to_main);

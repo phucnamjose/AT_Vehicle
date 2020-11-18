@@ -33,6 +33,7 @@ extern DcServo_t 		MR;
 extern DcServo_t 		ML;
 extern PID_t 			pid_MR;
 extern PID_t 			pid_ML;
+extern HeadPID_t	head_pid;
 extern Vehicle_t 		myVehicle;
 extern Step_t			stepDown;
 extern Step_t			stepUp;
@@ -44,7 +45,6 @@ extern ValueUsing_t 	valueUsingTable;
 // Counter
 uint8_t 		count_report;
 uint8_t			count_auto_run;
-uint8_t			count_lidar;
 uint8_t			count_read_head;
 // Buffer
 uint8_t 		usb_out_buff[200];
@@ -92,16 +92,18 @@ void setupMainThread(void) {
 	// Init vehicle
 	Vehicle_Init();
 	// Init Stepper motor and Hand
+	HAL_TIM_PWM_Stop_IT(&htim5, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Stop_IT(&htim9, TIM_CHANNEL_1);
 	StepInit(&stepUp, 0, 3, TIM5);
 	StepInit(&stepDown, 0, 3, TIM9);
 	Hand_Init();
 	// Turn power
-	AtSerial_SetPowerMotion(1);
+	//AtSerial_SetPowerMotion(1);
 	// Init state
-	Run_PID_flag 	= TRUE;
-	Execute_flag 	= TRUE;
-	Report_flag		= FALSE;
-	Read_heading_flag = FALSE;
+	Run_PID_flag 		= TRUE;
+	Execute_flag 		= TRUE;
+	Report_flag			= FALSE;
+	Read_heading_flag	= FALSE;
 	// Start timer for basic period
 	HAL_TIM_Base_Start_IT(&htim7);
 }
@@ -113,59 +115,43 @@ void loopMainThread(void) {
 	// 2.Update velocity
 	DcVelUpdate(&MR);
 	DcVelUpdate(&ML);
-	// 3.Run PID
-	if (Run_PID_flag) {
-		//PID_RunBlackBox(&pid_ML, &ML);
-		PID_Compute(&pid_MR, &MR);
-		PID_Compute(&pid_ML, &ML);
-	}
-	// 4.Execute Output
-	if (Execute_flag) {
-		DcExecuteOuput(&MR);
-		DcExecuteOuput(&ML);
-	}
-	// 5.Run According to Mode Vehicle
+
+	// 3.Localization
+	Vehicle_Localization();
+
+	// 4.Run According to Mode Vehicle
 	switch (myVehicle.mode_vehicle) {
 		case MODE_MANUAL:
-			Vehicle_CheckManualTimeOut();
+			Vehicle_RunManual();
 			break;
 
 		case MODE_AUTO:
-			Vehicle_Odometry();
-			count_lidar++;
-			// Prepare position to the next time
-			if (count_lidar == 1) {
-				AtSerial_RequestPosition();
-			} else if (count_lidar == 5) {
-				// Reset count_lidar
-				count_lidar = 0;
-				// Check new position frame from Lidar and read
-				uint32_t position_count = AtSerial_GetPositionCount();
-				if (position_count != myVehicle.position_lidar_count) {
-					AtSerial_GetPosition(&(myVehicle.position_lidar));
-					myVehicle.position_lidar_count = position_count;
-					Vehicle_EstimatePosition(TRUE);
-				} else {
-					// Estimate without IMU, max 5 times. >5 --> Error
-					Vehicle_EstimatePosition(FALSE);
-				}
-
-//				if (Head_IsRun()) {
-//					Head_RunBlackBox();
-//					Head_PushSample(myVehicle.position_center_veh.yaw);
-//				}
-
-				// Run test fuzzy first
-
-
-				Vehicle_AutoRunState();
-			}
+//			if (Head_IsRun()) {
+//				Head_RunBlackBox();
+//				Head_PushSample(myVehicle.position_center_veh.yaw);
+//			}
+			// Run test fuzzy first
+			Vehicle_AutoRunState();
 			break;
 		default:
 			break;
 	}
 
-	// 6.Check mail
+	// 5.Run PID
+	if (Run_PID_flag) {
+		//PID_RunBlackBox(&pid_ML, &ML);
+		PID_Compute(&pid_MR, &MR);
+		PID_Compute(&pid_ML, &ML);
+	}
+	// 6.Execute Output
+	if (Execute_flag) {
+		DcExecuteOuput(&MR);
+		DcExecuteOuput(&ML);
+	}
+
+	// 7. Hand action
+
+	// 8.Check mail
 	is_new_mail = osMailGet(mainTaskMailHandle, 0);// If have no mail, skip
 	if (is_new_mail.status == osEventMail) {
 		// Copy mail
@@ -174,34 +160,32 @@ void loopMainThread(void) {
 		osMailFree(mainTaskMailHandle, mail);
 		is_new_command = TRUE;
 	}
-	// 7.Check new command
+	// 9.Check new command
 	if (is_new_command) {
 		decisionAccordingCmd(command);
 		// Reset
 		is_new_command = FALSE;
 	}
 
-	//StepWritePusle(&stepUp, 100, &stepDown, 100);
+//	// Report heading sample
+//	if (Read_heading_flag) {
+//		double v_output, head_respond;
+//		v_output = Head_PopOutput(count_read_head);
+//		head_respond = Head_PopSample(count_read_head);
+//		count_read_head++;
+//
+//		double2string(v_buff, v_output, 6);
+//		double2string(yaw_buff, head_respond, 6);
+//		// Send through USB
+//		char feedback[30];
+//		snprintf(feedback, 30, "%d %s %s\n",(int)count_read_head, v_buff, yaw_buff);
+//		strcat((char *)usb_out_buff, feedback);
+//
+//		if (count_read_head == 200)
+//			Read_heading_flag = FALSE;
+//	}
 
-	// Report heading sample
-	if (Read_heading_flag) {
-		double v_output, head_respond;
-		v_output = Head_PopOutput(count_read_head);
-		head_respond = Head_PopSample(count_read_head);
-		count_read_head++;
-
-		double2string(v_buff, v_output, 6);
-		double2string(yaw_buff, head_respond, 6);
-		// Send through USB
-		char feedback[30];
-		snprintf(feedback, 30, "%d %s %s\n",(int)count_read_head, v_buff, yaw_buff);
-		strcat((char *)usb_out_buff, feedback);
-
-		if (count_read_head == 200)
-			Read_heading_flag = FALSE;
-	}
-
-	// 8.Report per 100ms
+	// 10.Report per 100ms
 	if (Report_flag) {
 		count_report++;
 		if (count_report == 10) {
@@ -263,9 +247,23 @@ void loopMainThread(void) {
 //			snprintf(feedback, 30, "%d %d %d\n", (int)ls_up, (int)ls_down_left, (int)ls_down_right);
 //			strcat((char *)usb_out_buff, feedback);
 //			//Report Limit Switch END ------------------------------------------
+
+			double angle, x, y;
+			angle = myVehicle.position_center_veh.yaw;
+			x	= myVehicle.position_center_veh.x;
+			y	= myVehicle.position_center_veh.y;
+			char angle_buff[20];
+			char x_buff[20];
+			char y_buff[20];
+			char report_angle[60];
+			double2string((uint8_t *)angle_buff, angle, 6);
+			double2string((uint8_t *)x_buff, x, 6);
+			double2string((uint8_t *)y_buff, y, 6);
+			snprintf(report_angle, 60, "%s %s %s\n", angle_buff, x_buff, y_buff);
+			strcat((char *)usb_out_buff, report_angle);
 		}
 	}
-	// 9. Check usb buff and send
+	// 10. Check usb buff and send
 	int32_t lenght;
 	lenght = strlen((char *)usb_out_buff);
 	if (lenght > 0)
@@ -275,21 +273,25 @@ void loopMainThread(void) {
 
 void decisionAccordingCmd(mainTaskMail_t cmd) {
 	switch (cmd.cmd_code) {
+		// 1.
 		case SET_SETPOINT:
 			PID_Setpoint(&pid_MR, cmd.setpoint_right);
 			PID_Setpoint(&pid_ML, cmd.setpoint_left);
 			strcat((char *)usb_out_buff, "Changed SETPOINT\n");
 			break;
+		// 2.
 		case SET_PID:
 			PID_SetFactor(&pid_MR, cmd.R_kp, cmd.R_ki, cmd.R_kd);
 			PID_SetFactor(&pid_ML, cmd.L_kp, cmd.L_ki, cmd.L_kd);
 			strcat((char *)usb_out_buff, "Changed PID\n");
 			break;
+		// 3.
 		case START:
 			Run_PID_flag 	= TRUE;
 			Execute_flag	= TRUE;
 			strcat((char *)usb_out_buff, "Started EXE\n");
 			break;
+		// 4.
 		case STOP:
 			DcStopMotor(&MR);
 			DcStopMotor(&ML);
@@ -297,10 +299,12 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			Execute_flag	= FALSE;
 			strcat((char *)usb_out_buff, "Stopped EXE\n");
 			break;
+		// 5.
 		case SAVE_PID:
 			// Write Flash file
 			strcat((char *)usb_out_buff, "Saved PID to Flash\n");
 			break;
+		// 6.
 		case GET_PID:
 		{
 			double kp_r, ki_r, kd_r;
@@ -323,54 +327,78 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			strcat((char *)usb_out_buff, report);
 		}
 			break;
+		// 7.
 		case RESET_PID:
 			PID_Reset(&pid_MR);
 			PID_Reset(&pid_ML);
 			strcat((char *)usb_out_buff, "RESET PID\n");
 			break;
+		// 8.
 		case MOVE_MANUAL:
 			moveManualVehicle(cmd.move);
 			break;
+		// 9.
 		case REPORT_ON:
 			Report_flag = TRUE;
 			break;
+		// 10.
 		case REPORT_OFF:
 			Report_flag = FALSE;
 			break;
+		// 11.
 		case SET_OUTPUT:
 			DcSetOuput(&MR, cmd.R_output);
 			DcSetOuput(&ML, cmd.L_output);
 			strcat((char *)usb_out_buff, "Changed OUTPUT\n");
 			break;
+		// 12.
 		case HAND_MANUAL:
 			// TODO:
 			break;
+		// 13.
 		case GET_SAMPLE:
 			Read_heading_flag = TRUE;
 			break;
+		// 14.
+		case RESET_ODOMETRY:
+			Vehicle_ResetOdometry();
+			strcat((char *)usb_out_buff, "Reset ODOMETRY\n");
+			break;
+		// 15.
+		case COPY_LIDAR_2_ODO:
+
+			break;
+		// 16.
 		case MODE_VEHICLE:
 			Vehicle_ChangeMode(cmd.mode_vehicle);
 			strcat((char *)usb_out_buff, "Changed MODE\n");
 			break;
+		// 17.
 		case MOVE_AUTO:
 			moveAutoVehicle(cmd.target_x, cmd.target_y, cmd.target_frame);
 			break;
+		// 18.
 		case SPEED_MOVE:
 			Vehicle_ChangeSpeed(cmd.speed_move);
 			strcat((char *)usb_out_buff, "Changed SPEED\n");
 			break;
+		// 19.
 		case EMERGENCY:
 			// TODO:
 			break;
+		// 20.
 		case HAND_AUTO:
 			// TODO:
 			break;
+		// 21.
 		case AUTO_START:
 			autoStart();
 			break;
+		// 22.
 		case AUTO_STOP:
 			autoStop();
 			break;
+		// 23.
 		case AUTO_ROTATE:
 			// TODO:
 			break;
@@ -387,40 +415,31 @@ uint8_t moveManualVehicle(enum_MoveManual move_type) {
 	// Right mode
 	switch (move_type) {
 		case STOP_VEHICLE:
-			Vehicle_Stop();
-			//strcat((char *)usb_out_buff, "STOP\n");
+			Vehicle_StopSoft();
 			break;
 		case FORWARD:
 			Vehicle_Forward();
-			//strcat((char *)usb_out_buff, "FORWARD\n");
 			break;
 		case BACKWARD:
 			Vehicle_Backward();
-			//strcat((char *)usb_out_buff, "BACKWARD\n");
 			break;
 		case ROTATE_LEFT:
 			Vehicle_RotLeft();
-			//strcat((char *)usb_out_buff, "ROTATE LEFT\n");
 			break;
 		case ROTATE_RIGHT:
 			Vehicle_RotRight();
-			//strcat((char *)usb_out_buff, "ROTATE RIGHT\n");
 			break;
 		case FORWARD_LEFT:
 			Vehicle_ForwardLeft();
-			//strcat((char *)usb_out_buff, "FORWARD-LEFT\n");
 			break;
 		case FORWARD_RIGHT:
 			Vehicle_ForwardRight();
-			//strcat((char *)usb_out_buff, "FORWARD-RIGHT\n");
 			break;
 		case BACKWARD_LEFT:
 			Vehicle_BackwardLeft();
-			//strcat((char *)usb_out_buff, "BACKWARD-LEFT\n");
 			break;
 		case BACKWARD_RIGHT:
 			Vehicle_BackwardRight();
-			//strcat((char *)usb_out_buff, "BACKWARD-RIGHT\n");
 			break;
 		default:
 			break;

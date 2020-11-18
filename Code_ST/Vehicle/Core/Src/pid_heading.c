@@ -10,95 +10,119 @@
 #include "system_params.h"
 #include "stdlib.h"
 
+/* External variables*/
 extern PID_t		pid_MR;
 extern PID_t		pid_ML;
 
-double	sample_respond[500];
-double	sample_output[500];
-int32_t head_count;
-uint8_t is_run_head;
+/* Internal variables*/
+HeadPID_t head_pid;
 
-
-void	Head_StartBlackBox(void) {
-	is_run_head = TRUE;
-	head_count = 0;
+void	Head_PID_Init() {
+	Head_PID_Reset(&head_pid);
+	Head_PID_SetFactor(&head_pid,
+						HEAD_PID_DEFAULT_KP,
+						HEAD_PID_DEFAULT_KI,
+						HEAD_PID_DEFAULT_KD);
 }
 
-uint8_t	Head_RunBlackBox(void) {
-	if (is_run_head == 0) {
+void 	Head_PID_Reset(HeadPID_t *pid) {
+	// Reset
+	pid->error = 0;
+	pid->pre_error = 0;
+	pid->pre2_error = 0;
+	pid->output = 0;
+	pid->pre_output = 0;
+	pid->v_setpoint = 0;
+
+	pid->count = 0;
+}
+
+void Head_PID_SetFactor(HeadPID_t *pid, double kp, double ki, double kd) {
+	pid->Kp = kp;
+	pid->Ki = ki;
+	pid->Kd = kd;
+}
+
+void	Head_PID_UpdateFeedback(HeadPID_t *pid, double feedback) {
+	pid->v_feedback = feedback;
+}
+
+void	Head_PID_Compute(HeadPID_t *pid) {
+	double P_part, I_part, D_part, output;
+	// Previous
+	pid->pre2_error = pid->pre_error;
+	pid->pre_error 	= pid->error;
+	pid->pre_output = pid->output;
+	// Current
+	pid->error 		= pid->v_setpoint - pid->v_feedback;
+	// PID
+	P_part = pid->Kp*(pid->error - pid->pre_error);
+	I_part = 0.5*pid->Ki*HEAD_PERIOD*(pid->error + pid->pre_error);
+	D_part = pid->Kd*(pid->error - 2*pid->pre_error + pid->pre2_error)/HEAD_PERIOD;
+	output = pid->pre_output + P_part + I_part + D_part;
+
+	// Saturation
+	if (output > 0.6)
+		output = 0.6;
+	else if (output < -0.6)
+		output = -0.6;
+
+ 	pid->output = output;
+}
+
+void	Head_PID_StartBlackBox(HeadPID_t *pid) {
+	pid->run_black_box = TRUE;
+	pid->count = 0;
+}
+
+uint8_t	Head_PID_RunBlackBox(HeadPID_t *pid) {
+	if (pid->run_black_box == 0) {
 		return FALSE;
 	}
-	head_count++;
-	if (head_count > 0 && head_count < 20) {
-		Head_SetVel(0.5);
-		sample_output[head_count] = 0.5;
-	} else if (head_count < 30) {
-		Head_SetVel(1);
-		sample_output[head_count] = 1;
-	} else if (head_count < 40) {
-		Head_SetVel(0.8);
-		sample_output[head_count] = 0.8;
-	} else if (head_count < 54) {
-		Head_SetVel(0.2);
-		sample_output[head_count] = 0.2;
-	} else if (head_count < 70) {
-		Head_SetVel(0.9);
-		sample_output[head_count] = 0.9;
-	} else if (head_count < 96) {
-		Head_SetVel(0.6);
-		sample_output[head_count] = 0.6;
-	} else if (head_count < 110) {
-		Head_SetVel(0.1);
-		sample_output[head_count] = 0.1;
-	} else if (head_count < 140) {
-		Head_SetVel(0.7);
-		sample_output[head_count] = 0.7;
-	} else if (head_count < 160) {
-		Head_SetVel(0.05);
-		sample_output[head_count] = 0.05;
-	} else if (head_count < 180) {
-		Head_SetVel(0.4);
-		sample_output[head_count] = 0.4;
-	} else if (head_count < 200) {
-		Head_SetVel(1);
-		sample_output[head_count] = 1;
+	pid->count++;
+	if (pid->count > 0 && pid->count < 20) {
+		Head_PID_SetPoint(pid, 0.5);
+
+	} else if (pid->count < 30) {
+		Head_PID_SetPoint(pid, 1);
+
+	} else if (pid->count < 40) {
+		Head_PID_SetPoint(pid, 0.8);
+
+	} else if (pid->count < 54) {
+		Head_PID_SetPoint(pid, 0.2);
+	} else if (pid->count < 70) {
+		Head_PID_SetPoint(pid, 0.9);
+
+	} else if (pid->count < 96) {
+		Head_PID_SetPoint(pid, 0.6);
+
+	} else if (pid->count < 110) {
+		Head_PID_SetPoint(pid, 0.1);
+
+	} else if (pid->count < 140) {
+		Head_PID_SetPoint(pid, 0.7);
+
+	} else if (pid->count < 160) {
+		Head_PID_SetPoint(pid, 0.05);
+
+	} else if (pid->count < 180) {
+		Head_PID_SetPoint(pid, 0.4);
+
+	} else if (pid->count < 200) {
+		Head_PID_SetPoint(pid, 1);
+
 	} else {
-		head_count = 0;
-		is_run_head = FALSE;
+		pid->count = 0;
+		pid->run_black_box = FALSE;
 	}
 	return TRUE;
 }
 
-void	Head_SetVel(double vel) {
-	double vel_each = abs(vel/2)*0.5;
-	vel_each = MPS2RPS(vel_each);
-	if (vel >= 0) {
-		PID_Setpoint(&pid_MR, -vel_each);
-		PID_Setpoint(&pid_ML, vel_each);
-	} else {
-		PID_Setpoint(&pid_MR, vel_each);
-		PID_Setpoint(&pid_ML, -vel_each);
-	}
+void	Head_PID_SetPoint(HeadPID_t *pid, double vel) {
+	double vel_each = MPS2RPS(vel)*0.5;
+	PID_Setpoint(&pid_MR, vel_each);
+	PID_Setpoint(&pid_ML, -vel_each);
 }
 
-void	Head_PushSample(double val) {
-	sample_respond[head_count] = val;
-}
 
-double	Head_PopSample(int32_t index) {
-	if (index < 0 || index > 499) {
-		return -1;
-	}
-	return sample_respond[index];
-}
-
-double	Head_PopOutput(int32_t index) {
-	if (index < 0 || index > 499) {
-		return -1;
-	}
-	return sample_output[index];
-}
-
-uint8_t	Head_IsRun(void) {
-	return is_run_head;
-}

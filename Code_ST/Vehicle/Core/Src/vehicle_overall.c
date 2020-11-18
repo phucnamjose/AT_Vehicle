@@ -15,6 +15,7 @@
 #include "string.h"
 #include "def_myself.h"
 #include "dc_servo.h"
+#include "pid_heading.h"
 
 
 
@@ -24,6 +25,7 @@ extern DcServo_t 	ML;
 extern PID_t		pid_MR;
 extern PID_t		pid_ML;
 extern Fuzzy_t     	myFuzzy;
+extern HeadPID_t	head_pid;
 extern Stanley_t  	myStanley;
 
 /* Internal Variables */
@@ -33,9 +35,12 @@ Vehicle_t 		myVehicle;
 void	Vehicle_Init() {
 	myVehicle.mode_vehicle 	= MODE_MANUAL;
 	myVehicle.move_manual	= STOP_VEHICLE;
+	myVehicle.time_vel_manual = 0;
+	myVehicle.phase_manual	= PHASE_MAN_DEC;
 	myVehicle.time_out_move_manual 	= 0;
 	myVehicle.miss_lidar_count		= 0;
-	myVehicle.speed_auto			= 0.15; // m/s
+	myVehicle.speed_manual			= 1;
+	myVehicle.speed_auto			= 1; // 100%
 	Fuzzy_Init();
 	Stanley_Init(&myStanley);
 }
@@ -45,9 +50,11 @@ void Vehicle_ChangeMode(enum_ModeVehicle mode) {
 	switch (mode) {
 		case MODE_AUTO:
 			myVehicle.mode_vehicle = mode;
+			Vehicle_StopHard();
 			break;
 		case MODE_MANUAL:
 			myVehicle.mode_vehicle = mode;
+			Vehicle_StopHard();
 			break;
 		default:
 			break;
@@ -56,7 +63,33 @@ void Vehicle_ChangeMode(enum_ModeVehicle mode) {
 
 
 void	Vehicle_ChangeSpeed(double speed) {
-	myVehicle.speed_manual = speed;
+	if (speed >= 0 && speed <= 1) {
+	//	myVehicle.speed_manual = speed;
+	//	myVehicle.speed_auto = speed;
+	}
+}
+
+
+void	Vehicle_Localization(void) {
+	// Run odometry per 10ms
+	Vehicle_Odometry();
+	myVehicle.count_lidar++;
+	// Get Lidar per 1s
+	if (myVehicle.count_lidar == 1) {
+		AtSerial_RequestPosition();
+	} else if (myVehicle.count_lidar == 100) {
+		// Reset count_lidar
+		myVehicle.count_lidar = 0;
+	}
+	// Check new position frame from Lidar and read
+	uint32_t position_count = AtSerial_GetPositionCount();
+	if (position_count != myVehicle.position_lidar_count) {
+		AtSerial_GetPosition(&(myVehicle.position_lidar));
+		myVehicle.position_lidar_count = position_count;
+		Vehicle_EstimatePosition(TRUE);
+	} else {
+		Vehicle_EstimatePosition(FALSE);
+	}
 }
 
 void Vehicle_EstimatePosition(uint8_t has_lidar) {
@@ -75,12 +108,16 @@ void Vehicle_EstimatePosition(uint8_t has_lidar) {
 		// Update base position for odometry method
 		memcpy(&(myVehicle.position_odometry),
 			&(myVehicle.position_center_veh), sizeof(Position_t));
-		myVehicle.miss_lidar_count = 0;
+		myVehicle.miss_lidar_count 	= 0;
+		myVehicle.miss_lidar_flag	= FALSE;
 	} else {
 		// Use result from odometry
-		myVehicle.miss_lidar_count++;
 		memcpy(&(myVehicle.position_center_veh),
 			&(myVehicle.position_odometry), sizeof(Position_t));
+		// Check miss lidar. If > 3s == Stop
+		if (++myVehicle.miss_lidar_count > 500) {
+			myVehicle.miss_lidar_flag	= TRUE;
+		}
 	}
 }
 
@@ -88,24 +125,44 @@ void	Vehicle_Odometry() {
 	double delta_left, delta_right, delta_yaw;
 	double x_new, y_new, yaw_new;
 	double yaw_old;
+	double delta_xb, delta_yb;
+	double delta_x, delta_y;
+	double v_bx;
 
 	yaw_old = myVehicle.position_odometry.yaw;
-
+	// vb
 	delta_left	= RPS2MPS(DcGetVel(&ML))*BASIC_PERIOD;
 	delta_right	= RPS2MPS(DcGetVel(&MR))*BASIC_PERIOD;
+	v_bx		= 0.5*(delta_left + delta_right);
 	delta_yaw 	= (delta_right - delta_left)/(DIS_TWO_WHEELS);// DIS = 2L in formula
+	// delta q_b
+	if (fabs(delta_yaw) < 0.0001) {
+		delta_xb = v_bx;
+		delta_yb = 0;
+	} else {
+		delta_xb = v_bx*sin(delta_yaw)/delta_yaw;
+		delta_yb = v_bx*(1 - cos(delta_yaw))/delta_yaw;
+	}
+	// convert to base frame
+	delta_x = delta_xb*cos(yaw_old) - delta_yb*sin(yaw_old);
+	delta_y = delta_xb*sin(yaw_old) + delta_yb*cos(yaw_old);
 
-
-	x_new 	= myVehicle.position_odometry.x
-				+ 0.5*(delta_left + delta_right)*cos(yaw_old+delta_yaw/2);
-	y_new	= myVehicle.position_odometry.y
-				+ 0.5*(delta_left + delta_right)*sin(yaw_old+delta_yaw/2);
-
+	x_new 	= myVehicle.position_odometry.x + delta_x;
+	y_new	= myVehicle.position_odometry.y + delta_y;
 	yaw_new	= Pi_To_Pi(yaw_old + delta_yaw);// [-Pi; Pi]
 	// Update
 	myVehicle.position_odometry.x 	= x_new;
 	myVehicle.position_odometry.y 	= y_new;
 	myVehicle.position_odometry.yaw = yaw_new;
+}
+
+void Vehicle_ResetOdometry(void) {
+	memset(&(myVehicle.position_odometry), 0, sizeof(Position_t));
+}
+
+void	Vehicle_CopyLidar(void) {
+	memcpy(&(myVehicle.position_odometry),
+			&(myVehicle.position_center_veh), sizeof(Position_t));
 }
 
 void Vehicle_AutoDrive(void) {
@@ -163,8 +220,7 @@ void	Vehicle_TestFuzzy(void) {
 		v_long_right 	= (- fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto;
 		v_long_left		= ( fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto;
 	}
-	PID_Setpoint(&pid_MR, MPS2RPS(v_long_right));
-	PID_Setpoint(&pid_ML, MPS2RPS(v_long_left));
+	Vehicle_SetLinearVel(v_long_right, v_long_left);
 
 	// Check stable
 	double angle_error;
@@ -186,7 +242,7 @@ void	Vehicle_AutoNewTarget(double target_x, double target_y, uint8_t *target_dat
 	memcpy(&(myVehicle.target_frame[0]), target_data, LENGHT_CMD_AUTO_MOVE);
 	// Switch state
 	myVehicle.state_auto_run = AUTO_RUN_NEW_TARGET;
-	Vehicle_Stop();
+	Vehicle_StopHard();
 }
 
 void	Vehicle_AutoStart() {
@@ -194,7 +250,7 @@ void	Vehicle_AutoStart() {
 }
 
 void	Vehicle_AutoStop() {
-	Vehicle_Stop();
+	Vehicle_StopHard();
 	myVehicle.state_auto_run = AUTO_RUN_WAIT_START;
 }
 
@@ -235,13 +291,13 @@ void	Vehicle_AutoRunState() {
 
 			// Check finish
 //			if (Stanley_IsFinish(&myStanley)) {
-//				Vehicle_Stop();
+//				Vehicle_StopHard();
 //				myVehicle.state_auto_run = AUTO_RUN_FINISH;
 //			}
 			break;
 		case AUTO_RUN_FINISH:
 			// Stop vehicle
-			Vehicle_Stop();
+			Vehicle_StopHard();
 			// Inform Computer
 			AtSerial_ReportFinishTarget(myVehicle.target_frame);
 			// Return wait new target
@@ -255,74 +311,120 @@ void	Vehicle_AutoRunState() {
 }
 
 
-void Vehicle_Stop(void) {
+void	Vehicle_SetLinearVel(double v_long_right, double v_long_left) {
+	PID_Setpoint(&pid_MR, MPS2RPS(v_long_right));
+	PID_Setpoint(&pid_ML, MPS2RPS(v_long_left));
+}
+
+void Vehicle_StopSoft(void) {
+	myVehicle.pre_move_manual = myVehicle.move_manual;
 	myVehicle.move_manual = STOP_VEHICLE;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, 0);
-	PID_Setpoint(&pid_ML, 0);
+}
+
+void Vehicle_StopHard(void) {
+	myVehicle.move_manual = STOP_VEHICLE;
+	myVehicle.pre_move_manual = STOP_VEHICLE;
+	myVehicle.time_out_move_manual = 0;
+	Vehicle_SetLinearVel(0, 0);
+	myVehicle.speed_man_current = 0;
 }
 
 void Vehicle_Forward(void) {
 	myVehicle.move_manual = FORWARD;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, 1.5);
-	PID_Setpoint(&pid_ML, 1.5);
 }
 
 void Vehicle_Backward(void) {
 	myVehicle.move_manual = BACKWARD;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, -0.8);
-	PID_Setpoint(&pid_ML, -0.8);
 }
 
 void Vehicle_RotLeft(void) {
 	myVehicle.move_manual = ROTATE_LEFT;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, 0.4);
-	PID_Setpoint(&pid_ML, -0.4);
+	Vehicle_SetLinearVel(0.07, -0.07);
 }
 
 void Vehicle_RotRight(void) {
 	myVehicle.move_manual = ROTATE_RIGHT;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, -0.4);
-	PID_Setpoint(&pid_ML, 0.4);
+	Vehicle_SetLinearVel(-0.07, 0.07);
 }
 
 void Vehicle_ForwardLeft(void) {
 	myVehicle.move_manual = FORWARD_LEFT;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, 1.5);
-	PID_Setpoint(&pid_ML, 1);
+	Vehicle_SetLinearVel(0.489, 0.326);
 }
 
 void Vehicle_ForwardRight(void) {
 	myVehicle.move_manual = FORWARD_RIGHT;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, 1);
-	PID_Setpoint(&pid_ML, 1.5);
+	Vehicle_SetLinearVel(0.326, 0.489);
 }
 
 void Vehicle_BackwardLeft(void) {
 	myVehicle.move_manual = BACKWARD_LEFT;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, -1);
-	PID_Setpoint(&pid_ML, -0.6);
+	Vehicle_SetLinearVel(-0.195, -0.326);
 }
 
 void Vehicle_BackwardRight(void) {
 	myVehicle.move_manual = BACKWARD_RIGHT;
 	myVehicle.time_out_move_manual = 0;
-	PID_Setpoint(&pid_MR, -0.6);
-	PID_Setpoint(&pid_ML, -1);
+	Vehicle_SetLinearVel(-0.326, -0.195);
 }
 
 
-void Vehicle_CheckManualTimeOut(void) {
+void Vehicle_RunManual(void) {
+	switch (myVehicle.move_manual) {
+		case STOP_VEHICLE:
+			if (FORWARD == myVehicle.pre_move_manual) {
+				double vel_set, max_speed;
+				max_speed = myVehicle.speed_manual*VEH_MAX_MANUAL_FORWARD;
+				vel_set = myVehicle.speed_man_current - 0.01*max_speed;
+				vel_set = (vel_set < 0) ? 0 : vel_set;
+				myVehicle.speed_man_current = vel_set;
+				Vehicle_SetLinearVel(vel_set, vel_set);
+			} else if (BACKWARD == myVehicle.pre_move_manual) {
+				double vel_set, max_speed;
+				max_speed = myVehicle.speed_manual*VEH_MAX_MANUAL_BACKWARD;
+				vel_set = myVehicle.speed_man_current + 0.01*max_speed;
+				vel_set = (vel_set > 0) ? 0 : vel_set;
+				myVehicle.speed_man_current = vel_set;
+				Vehicle_SetLinearVel(vel_set, vel_set);
+			} else {
+				Vehicle_SetLinearVel(0, 0);
+				myVehicle.speed_man_current = 0;
+			}
+			break;
+		case FORWARD:
+			{
+				double vel_set, max_speed;
+				max_speed = myVehicle.speed_manual*VEH_MAX_MANUAL_FORWARD;
+				vel_set = myVehicle.speed_man_current + 0.01*max_speed;
+				vel_set = (vel_set > max_speed) ? max_speed : vel_set;
+				myVehicle.speed_man_current = vel_set;
+				Vehicle_SetLinearVel(vel_set, vel_set);
+			}
+			break;
+		case BACKWARD:
+			{
+				double vel_set, max_speed;
+				max_speed = myVehicle.speed_manual*VEH_MAX_MANUAL_BACKWARD;
+				vel_set = myVehicle.speed_man_current - 0.01*max_speed;
+				vel_set = (vel_set < (-max_speed)) ? -max_speed : vel_set;
+				myVehicle.speed_man_current = vel_set;
+				Vehicle_SetLinearVel(vel_set, vel_set);
+			}
+			break;
+		default:
+			break;
+	}
 	myVehicle.time_out_move_manual += 0.01;
 	if (myVehicle.time_out_move_manual > TIME_LIMIT_MOVE_REFRESH) {
-		Vehicle_Stop();
+		Vehicle_StopHard();
 	}
 }
 

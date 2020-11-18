@@ -10,8 +10,8 @@
 
 #include "def_myself.h"
 
-#define LIM_PULSE_UP		100
-#define LIM_PULSE_DOWN		100
+#define LIM_PULSE_UP		50
+#define LIM_PULSE_DOWN		50
 
 #define	HARD_LIM_UP_NEG		(-0.1)
 #define	HARD_LIM_DOWN_NEG	(-0.1)
@@ -52,6 +52,5 @@ void	StepReadLimit(Step_t *step_up, Step_t *step_down);
 uint8_t	StepWritePusle(Step_t *step_up, int8_t pulse_up, Step_t *step_down, int8_t pulse_down);
 void	StepEnable(void);
 void	StepDisable(void);
-uint8_t StepIsScanned(Step_t *step);
 
 #endif /* INC_STEP_MOTOR_H_ */

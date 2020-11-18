@@ -163,7 +163,7 @@ typedef struct AtSerial
 typedef enum enum_MessageClass_t
 {
 	MSG_WRONG = 0,
-	MSG_ONPY_ME,
+	MSG_ONLY_ME,
 	MSG_FORWARD,
 	MSG_MAIL_TO_MAINTASK
 }enum_MessageClass_t;

@@ -99,6 +99,8 @@ uint8_t Hand_ScanHard(void) {
 uint8_t Hand_GoToSoftLim(void) {
 	int8_t	pulse_up, pulse_down;
 
+	pulse_up 	= 0;
+	pulse_down	= 0;
 	Hand_UpdateTruePositon();
 	if (myHand.theta_up < SOFT_LIM_UP_NEG)
 		pulse_up 	= stepUp.pulse_scan;

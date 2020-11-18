@@ -22,7 +22,9 @@ const char *DebugCmd_Code[]  = {"SETSPT",
 								"REPOFF",
 								"OUTPUT",
 								"SETHAN",
-								"GETSAM"};
+								"GETSAM",
+								"RSTODO",
+								"CPYLID"};
 
 /* Implementation*/
 
@@ -110,10 +112,25 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			return SET_OUTPUT;
 		} else
 			return CMD_NONE;
-		// 12. Get heading sample
+		// 12. Set hand action
+	}  else if ( 0 == strcmp(command, DebugCmd_Code[HAND_MANUAL])) {
+		arguments->cmd_code = HAND_MANUAL;
+		return HAND_MANUAL;
+
+		// 13. Get sample headind
 	} else if ( 0 == strcmp(command, DebugCmd_Code[GET_SAMPLE])) {
 		arguments->cmd_code = GET_SAMPLE;
 		return GET_SAMPLE;
+
+		// 14. Reset odometry position
+	} else if ( 0 == strcmp(command, DebugCmd_Code[RESET_ODOMETRY])) {
+		arguments->cmd_code = RESET_ODOMETRY;
+		return RESET_ODOMETRY;
+
+		// 15. Copy lidar to odometry
+	} else if ( 0 == strcmp(command, DebugCmd_Code[COPY_LIDAR_2_ODO])) {
+		arguments->cmd_code = COPY_LIDAR_2_ODO;
+		return COPY_LIDAR_2_ODO;
 
 		// Wrong code
 	} else {

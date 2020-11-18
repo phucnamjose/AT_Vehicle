@@ -48,7 +48,7 @@ void loopRasberryThread(void) {
 		// Classify
 		switch (msg_classify) {
 			case MSG_WRONG:
-			case MSG_ONPY_ME:
+			case MSG_ONLY_ME:
 				break;
 			case MSG_FORWARD:
 				serial_sendArduinoMega(&(atSerialPi._serialRecvBytes[0]),

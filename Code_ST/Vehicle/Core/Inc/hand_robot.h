@@ -34,7 +34,7 @@ typedef struct Hand_Duty_t
 
 typedef struct Hand_t
 {
-	// Scan word
+	// Scan work
 	enum_StateScan 	state_scan;
 	enum_StateHard	state_hard;
 	uint8_t			is_scanned;
@@ -49,6 +49,7 @@ typedef struct Hand_t
 	double			lim_pos_down;
 	// Duty
 	Hand_Duty_t		duty;
+	//
 }Hand_t;
 
 
