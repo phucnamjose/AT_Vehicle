@@ -112,7 +112,6 @@ int32_t	PID_GetCount(PID_t *pid) {
 	return pid->count;
 }
 
-
 void	PID_StartBlackBox(PID_t *pid) {
 	pid->run_black_box = 1;
 	pid->count = 0;

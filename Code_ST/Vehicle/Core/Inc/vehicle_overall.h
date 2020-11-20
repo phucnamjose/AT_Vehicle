@@ -16,6 +16,7 @@
 #define VEH_MAX_MANUAL_BACKWARD		0.25 	// m/s
 #define VEH_MAX_AUTO				0.2		// m/s
 
+#define	TIME_LIMIT_MOVE_REFRESH	1.5 // (second)
 
 
 typedef enum{
@@ -69,26 +70,25 @@ typedef	struct Vehicle_t
 	uint8_t				count_lidar;
 } Vehicle_t;
 
-
-#define	TIME_LIMIT_MOVE_REFRESH	1.5 // (second)
-
+/* Function Prototypes*/
+// Common
 void	Vehicle_Init(void);
 void	Vehicle_ChangeMode(enum_ModeVehicle mode);
 void	Vehicle_ChangeSpeed(double speed);
-
 void	Vehicle_Localization(void);
 void	Vehicle_EstimatePosition(uint8_t has_lidar);
 void	Vehicle_Odometry(void);
 void	Vehicle_ResetOdometry(void);
 void	Vehicle_CopyLidar(void);
+// Auto
 void 	Vehicle_AutoDrive(void);
 void	Vehicle_TestFuzzy(void);
+void	Vehicle_TestHeadPID(void);
 void	Vehicle_AutoNewTarget(double target_x, double target_y, uint8_t *target_data);
 void	Vehicle_AutoStart(void);
 void	Vehicle_AutoStop(void);
 void	Vehicle_AutoRunState(void);
-
-
+// Manual
 void	Vehicle_SetLinearVel(double long_right, double long_left);
 void 	Vehicle_StopSoft(void);
 void 	Vehicle_StopHard(void);
@@ -100,7 +100,7 @@ void 	Vehicle_ForwardLeft(void);
 void 	Vehicle_ForwardRight(void);
 void 	Vehicle_BackwardLeft(void);
 void 	Vehicle_BackwardRight(void);
-void	Vehicle_RunManual(void);
+void	Vehicle_ManualRun(void);
 
 
 #endif /* INC_VEHICLE_OVERALL_H_ */

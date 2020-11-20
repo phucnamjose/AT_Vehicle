@@ -51,6 +51,11 @@ typedef	enum enum_MoveManual{
 	BACKWARD_RIGHT
 }enum_MoveManual;
 
+typedef enum enum_HandMode{
+	HAND_MODE_NONE = 0,
+	HAND_MODE_MANUAL,
+	HAND_MODE_AUTO
+}enum_HandMode;
 
 typedef	enum enum_HandManual{
 	HAND_MAN_STOP = 0,

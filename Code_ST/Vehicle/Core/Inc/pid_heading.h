@@ -23,10 +23,12 @@ typedef struct HeadPID_t
 	// PID parameters
 	double	Kp, Ki, Kd;
 	// Input and Output of PID controller
-	double	v_setpoint, v_feedback , output;
+	double	setpoint, feedback , output;
+	double	output_each;
 	// Inside Variable
 	double	pre_output;
 	double	error, pre_error, pre2_error;
+	double	saturation;
 	// Count
 	int32_t count;
 	uint8_t run_black_box;
@@ -40,7 +42,11 @@ void	Head_PID_UpdateFeedback(HeadPID_t *pid, double feedback);
 void	Head_PID_Compute(HeadPID_t *pid);
 void	Head_PID_StartBlackBox(HeadPID_t *pid);
 uint8_t	Head_PID_RunBlackBox(HeadPID_t *pid);
-void	Head_PID_SetPoint(HeadPID_t *pid, double vel);
-
+void	Head_PID_SetOuput(HeadPID_t *pid, double vel);
+void	Head_PID_SetPoint(HeadPID_t *pid, double angle);
+double	Head_PID_GetOutput(HeadPID_t *pid);
+double	Head_PID_GetOutputEach(HeadPID_t *pid);
+void	Head_PID_SetSaturation(HeadPID_t *pid, double thresh);
+int32_t	Head_PID_GetCount(HeadPID_t *pid);
 
 #endif /* INC_PID_HEADING_H_ */

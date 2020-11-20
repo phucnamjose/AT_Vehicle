@@ -27,14 +27,15 @@ void	Head_PID_Init() {
 
 void 	Head_PID_Reset(HeadPID_t *pid) {
 	// Reset
-	pid->error = 0;
-	pid->pre_error = 0;
+	pid->error 		= 0;
+	pid->pre_error 	= 0;
 	pid->pre2_error = 0;
-	pid->output = 0;
-	pid->pre_output = 0;
-	pid->v_setpoint = 0;
+	pid->output 	= 0;
+	pid->output_each 	= 0;
+	pid->pre_output 	= 0;
+	pid->setpoint 		= 0;
 
-	pid->count = 0;
+	pid->count 			= 0;
 }
 
 void Head_PID_SetFactor(HeadPID_t *pid, double kp, double ki, double kd) {
@@ -44,7 +45,7 @@ void Head_PID_SetFactor(HeadPID_t *pid, double kp, double ki, double kd) {
 }
 
 void	Head_PID_UpdateFeedback(HeadPID_t *pid, double feedback) {
-	pid->v_feedback = feedback;
+	pid->feedback = feedback;
 }
 
 void	Head_PID_Compute(HeadPID_t *pid) {
@@ -54,7 +55,7 @@ void	Head_PID_Compute(HeadPID_t *pid) {
 	pid->pre_error 	= pid->error;
 	pid->pre_output = pid->output;
 	// Current
-	pid->error 		= pid->v_setpoint - pid->v_feedback;
+	pid->error 		= pid->setpoint - pid->feedback;
 	// PID
 	P_part = pid->Kp*(pid->error - pid->pre_error);
 	I_part = 0.5*pid->Ki*HEAD_PERIOD*(pid->error + pid->pre_error);
@@ -62,12 +63,13 @@ void	Head_PID_Compute(HeadPID_t *pid) {
 	output = pid->pre_output + P_part + I_part + D_part;
 
 	// Saturation
-	if (output > 0.6)
-		output = 0.6;
-	else if (output < -0.6)
-		output = -0.6;
+	if (output > pid->saturation)
+		output = pid->saturation;
+	else if (output < (-pid->saturation))
+		output = -pid->saturation;
 
  	pid->output = output;
+ 	pid->output_each = 0.5*output;
 }
 
 void	Head_PID_StartBlackBox(HeadPID_t *pid) {
@@ -81,36 +83,36 @@ uint8_t	Head_PID_RunBlackBox(HeadPID_t *pid) {
 	}
 	pid->count++;
 	if (pid->count > 0 && pid->count < 20) {
-		Head_PID_SetPoint(pid, 0.5);
+		Head_PID_SetOuput(pid, 0.5);
 
 	} else if (pid->count < 30) {
-		Head_PID_SetPoint(pid, 1);
+		Head_PID_SetOuput(pid, 1);
 
 	} else if (pid->count < 40) {
-		Head_PID_SetPoint(pid, 0.8);
+		Head_PID_SetOuput(pid, 0.8);
 
 	} else if (pid->count < 54) {
-		Head_PID_SetPoint(pid, 0.2);
+		Head_PID_SetOuput(pid, 0.2);
 	} else if (pid->count < 70) {
-		Head_PID_SetPoint(pid, 0.9);
+		Head_PID_SetOuput(pid, 0.9);
 
 	} else if (pid->count < 96) {
-		Head_PID_SetPoint(pid, 0.6);
+		Head_PID_SetOuput(pid, 0.6);
 
 	} else if (pid->count < 110) {
-		Head_PID_SetPoint(pid, 0.1);
+		Head_PID_SetOuput(pid, 0.1);
 
 	} else if (pid->count < 140) {
-		Head_PID_SetPoint(pid, 0.7);
+		Head_PID_SetOuput(pid, 0.7);
 
 	} else if (pid->count < 160) {
-		Head_PID_SetPoint(pid, 0.05);
+		Head_PID_SetOuput(pid, 0.05);
 
 	} else if (pid->count < 180) {
-		Head_PID_SetPoint(pid, 0.4);
+		Head_PID_SetOuput(pid, 0.4);
 
 	} else if (pid->count < 200) {
-		Head_PID_SetPoint(pid, 1);
+		Head_PID_SetOuput(pid, 1);
 
 	} else {
 		pid->count = 0;
@@ -119,10 +121,29 @@ uint8_t	Head_PID_RunBlackBox(HeadPID_t *pid) {
 	return TRUE;
 }
 
-void	Head_PID_SetPoint(HeadPID_t *pid, double vel) {
-	double vel_each = MPS2RPS(vel)*0.5;
+void	Head_PID_SetOuput(HeadPID_t *pid, double vel) {
+	double vel_each = MPS2RPS(vel)*0.5*0.25;// max: 0.125 each
 	PID_Setpoint(&pid_MR, vel_each);
 	PID_Setpoint(&pid_ML, -vel_each);
 }
 
+void	Head_PID_SetPoint(HeadPID_t *pid, double angle) {
+	pid->setpoint = angle;
+}
+
+double	Head_PID_GetOutput(HeadPID_t *pid) {
+	return pid->output;
+}
+
+double	Head_PID_GetOutputEach(HeadPID_t *pid) {
+	return pid->output_each;
+}
+
+void	Head_PID_SetSaturation(HeadPID_t *pid, double thresh) {
+	pid->saturation = thresh;
+}
+
+int32_t	Head_PID_GetCount(HeadPID_t *pid) {
+	return pid->count;
+}
 

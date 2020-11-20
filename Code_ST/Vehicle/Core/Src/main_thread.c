@@ -92,10 +92,12 @@ void setupMainThread(void) {
 	// Init vehicle
 	Vehicle_Init();
 	// Init Stepper motor and Hand
-	HAL_TIM_PWM_Stop_IT(&htim5, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Stop_IT(&htim9, TIM_CHANNEL_1);
-	StepInit(&stepUp, 0, 3, TIM5);
-	StepInit(&stepDown, 0, 3, TIM9);
+	StepInit(&stepUp, 0, 8, TIM5);
+	StepInit(&stepDown, 0, 15, TIM9);
+	HAL_TIM_PWM_Start_IT(&htim5, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start_IT(&htim9, TIM_CHANNEL_1);
+	__HAL_DBGMCU_FREEZE_TIM5();
+	__HAL_DBGMCU_FREEZE_TIM9();
 	Hand_Init();
 	// Turn power
 	//AtSerial_SetPowerMotion(1);
@@ -119,18 +121,12 @@ void loopMainThread(void) {
 	// 3.Localization
 	Vehicle_Localization();
 
-	// 4.Run According to Mode Vehicle
+	// 4.Run vehicle according to mode
 	switch (myVehicle.mode_vehicle) {
 		case MODE_MANUAL:
-			Vehicle_RunManual();
+			Vehicle_ManualRun();
 			break;
-
 		case MODE_AUTO:
-//			if (Head_IsRun()) {
-//				Head_RunBlackBox();
-//				Head_PushSample(myVehicle.position_center_veh.yaw);
-//			}
-			// Run test fuzzy first
 			Vehicle_AutoRunState();
 			break;
 		default:
@@ -143,13 +139,23 @@ void loopMainThread(void) {
 		PID_Compute(&pid_MR, &MR);
 		PID_Compute(&pid_ML, &ML);
 	}
-	// 6.Execute Output
+	// 6.Execute output
 	if (Execute_flag) {
 		DcExecuteOuput(&MR);
 		DcExecuteOuput(&ML);
 	}
 
-	// 7. Hand action
+	// 7. Run hand according to mode
+	switch (myHand.mode) {
+		case HAND_MODE_MANUAL:
+			Hand_ManualRun();
+			break;
+		case HAND_MODE_AUTO:
+			Hand_AutoRunState();
+			break;
+		default:
+			break;
+	}
 
 	// 8.Check mail
 	is_new_mail = osMailGet(mainTaskMailHandle, 0);// If have no mail, skip
@@ -167,24 +173,6 @@ void loopMainThread(void) {
 		is_new_command = FALSE;
 	}
 
-//	// Report heading sample
-//	if (Read_heading_flag) {
-//		double v_output, head_respond;
-//		v_output = Head_PopOutput(count_read_head);
-//		head_respond = Head_PopSample(count_read_head);
-//		count_read_head++;
-//
-//		double2string(v_buff, v_output, 6);
-//		double2string(yaw_buff, head_respond, 6);
-//		// Send through USB
-//		char feedback[30];
-//		snprintf(feedback, 30, "%d %s %s\n",(int)count_read_head, v_buff, yaw_buff);
-//		strcat((char *)usb_out_buff, feedback);
-//
-//		if (count_read_head == 200)
-//			Read_heading_flag = FALSE;
-//	}
-
 	// 10.Report per 100ms
 	if (Report_flag) {
 		count_report++;
@@ -192,7 +180,7 @@ void loopMainThread(void) {
 			// Reset count report
 			count_report = 0;
 
-//			//System identify BEGIN -----------------------------------------
+//			//System Servo identify BEGIN -----------------------------------------
 //			double out_left;
 //			double out_right;
 //			int32_t pid_count;
@@ -208,7 +196,6 @@ void loopMainThread(void) {
 //			if (pid_count == 0)
 //				Report_flag = FALSE;
 //			//System identify END ------------------------------------------
-
 
 //			//Report Servo respond BEGIN -----------------------------------------
 //			double v_lelf;
@@ -235,35 +222,46 @@ void loopMainThread(void) {
 //			serial_sendRasberryPi((uint8_t *)fb_and_sp, len_pi);
 //			//Report Servo respond END ------------------------------------------
 
-
 //			//Report Limit Switch BEGIN ------------------------------------------
-//			uint8_t ls_up, ls_down_left, ls_down_right;
-//			StepReadLimit(&stepUp, &stepDown);
-//			ls_up = stepUp.limit_negative;
-//			ls_down_left = stepDown.limit_negative;
-//			ls_down_right = stepDown.limit_positive;
-//			// Send through USB
-//			char feedback[30];
-//			snprintf(feedback, 30, "%d %d %d\n", (int)ls_up, (int)ls_down_left, (int)ls_down_right);
-//			strcat((char *)usb_out_buff, feedback);
-//			//Report Limit Switch END ------------------------------------------
+			uint8_t ls_up, ls_down_left, ls_down_right;
+			StepReadLimit(&stepUp, &stepDown);
+			ls_up = stepUp.limit_negative;
+			ls_down_left = stepDown.limit_negative;
+			ls_down_right = stepDown.limit_positive;
+			// Send through USB
+			char feedback[30];
+			snprintf(feedback, 30, "%d %d %d\n", (int)ls_up, (int)ls_down_left, (int)ls_down_right);
+			strcat((char *)usb_out_buff, feedback);
+			//Report Limit Switch END ------------------------------------------
 
-			double angle, x, y;
-			angle = myVehicle.position_center_veh.yaw;
-			x	= myVehicle.position_center_veh.x;
-			y	= myVehicle.position_center_veh.y;
-			char angle_buff[20];
-			char x_buff[20];
-			char y_buff[20];
-			char report_angle[60];
-			double2string((uint8_t *)angle_buff, angle, 6);
-			double2string((uint8_t *)x_buff, x, 6);
-			double2string((uint8_t *)y_buff, y, 6);
-			snprintf(report_angle, 60, "%s %s %s\n", angle_buff, x_buff, y_buff);
-			strcat((char *)usb_out_buff, report_angle);
+//			//Report Position BEGIN ------------------------------------------
+//			double angle, x, y;
+//			char angle_buff[20];
+//			char x_buff[20];
+//			char y_buff[20];
+//			char report_angle[60];
+//			// Lidar
+//			angle = myVehicle.position_center_veh.yaw;
+//			x	= myVehicle.position_center_veh.x;
+//			y	= myVehicle.position_center_veh.y;
+//			double2string((uint8_t *)angle_buff, angle, 6);
+//			double2string((uint8_t *)x_buff, x, 6);
+//			double2string((uint8_t *)y_buff, y, 6);
+//			snprintf(report_angle, 60, "%s %s %s ", angle_buff, x_buff, y_buff);
+//			strcat((char *)usb_out_buff, report_angle);
+//			// Odometry
+//			angle = myVehicle.position_odometry.yaw;
+//			x	= myVehicle.position_odometry.x;
+//			y	= myVehicle.position_odometry.y;
+//			double2string((uint8_t *)angle_buff, angle, 6);
+//			double2string((uint8_t *)x_buff, x, 6);
+//			double2string((uint8_t *)y_buff, y, 6);
+//			snprintf(report_angle, 60, "%s %s %s\r\n", angle_buff, x_buff, y_buff);
+//			strcat((char *)usb_out_buff, report_angle);
+//			//Report Position END ------------------------------------------
 		}
 	}
-	// 10. Check usb buff and send
+	// 11. Check usb buff and send
 	int32_t lenght;
 	lenght = strlen((char *)usb_out_buff);
 	if (lenght > 0)
@@ -271,7 +269,7 @@ void loopMainThread(void) {
 
 }
 
-void decisionAccordingCmd(mainTaskMail_t cmd) {
+void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 	switch (cmd.cmd_code) {
 		// 1.
 		case SET_SETPOINT:
@@ -340,6 +338,7 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 		// 9.
 		case REPORT_ON:
 			Report_flag = TRUE;
+			count_report = myVehicle.count_lidar;
 			break;
 		// 10.
 		case REPORT_OFF:
@@ -353,7 +352,7 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			break;
 		// 12.
 		case HAND_MANUAL:
-			// TODO:
+			handManualRobot(cmd.hand_manual);
 			break;
 		// 13.
 		case GET_SAMPLE:
@@ -366,7 +365,8 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			break;
 		// 15.
 		case COPY_LIDAR_2_ODO:
-
+			Vehicle_CopyLidar();
+			strcat((char *)usb_out_buff, "Copied LIDAR\n");
 			break;
 		// 16.
 		case MODE_VEHICLE:
@@ -388,7 +388,7 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 			break;
 		// 20.
 		case HAND_AUTO:
-			// TODO:
+			handAutoRobot(cmd.hand_auto);
 			break;
 		// 21.
 		case AUTO_START:
@@ -408,7 +408,6 @@ void decisionAccordingCmd(mainTaskMail_t cmd) {
 }
 
 uint8_t moveManualVehicle(enum_MoveManual move_type) {
-
 	// Check mode
 	if (MODE_AUTO == myVehicle.mode_vehicle)
 		return FALSE;
@@ -484,15 +483,55 @@ uint8_t	autoStop(void) {
 		return FALSE;
 }
 
-void 	handManualRobot(enum_HandManual hand_manual) {
-
+uint8_t handManualRobot(enum_HandManual hand_manual) {
+	// Check mode
+	if (HAND_MODE_AUTO == myHand.mode)
+		return FALSE;
+	// Right mode
+	switch (hand_manual) {
+		case HAND_MAN_STOP:
+			Hand_Stop();
+			strcat((char *)usb_out_buff, "STOP\n");
+			break;
+//		case HAND_MAN_UP:
+//			Hand_Up();
+//			break;
+//		case HAND_MAN_DOWN:
+//			Hand_Down();
+//			break;
+//		case HAND_MAN_LEFT:
+//			Hand_Left();
+//			break;
+//		case HAND_MAN_RIGHT:
+//			Hand_Right();
+//			break;
+		case HAND_MAN_UP:
+			Hand_Left();
+			strcat((char *)usb_out_buff, "LEFT\n");
+			break;
+		case HAND_MAN_DOWN:
+			Hand_Right();
+			strcat((char *)usb_out_buff, "RIGHT\n");
+			break;
+		case HAND_MAN_LEFT:
+			Hand_Up();
+			strcat((char *)usb_out_buff, "UP\n");
+			break;
+		case HAND_MAN_RIGHT:
+			Hand_Down();
+			strcat((char *)usb_out_buff, "DOWN\n");
+			break;
+		default:
+			break;
+	}
+	return TRUE;
 }
 
-void 	handAutoRobot(enum_HandManual hand_manual) {
-
+uint8_t	handAutoRobot(enum_HandManual hand_manual) {
+	return TRUE;
 }
 
-void mainTask_SendMail(mainTaskMail_t *cmd_to_main) {
+void	mainTask_SendMail(mainTaskMail_t *cmd_to_main) {
 	mainTaskMail_t *mainMail;
 	mainMail = NULL;
 
