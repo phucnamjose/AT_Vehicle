@@ -112,10 +112,14 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			return SET_OUTPUT;
 		} else
 			return CMD_NONE;
-		// 12. Set hand action
+		// 12. Set hand action auto
 	}  else if ( 0 == strcmp(command, DebugCmd_Code[HAND_MANUAL])) {
-		arguments->cmd_code = HAND_MANUAL;
-		return HAND_MANUAL;
+		lenght = sscanf(para, "%d", (int *)&(arguments->hand_auto));
+		if (lenght == 1) {
+			arguments->cmd_code = HAND_AUTO;
+			return HAND_AUTO;
+		} else
+			return CMD_NONE;
 
 		// 13. Get sample headind
 	} else if ( 0 == strcmp(command, DebugCmd_Code[GET_SAMPLE])) {

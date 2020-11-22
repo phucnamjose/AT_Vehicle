@@ -52,6 +52,7 @@ void Vehicle_ChangeMode(enum_ModeVehicle mode) {
 	switch (mode) {
 		case MODE_AUTO:
 			myVehicle.mode_vehicle = mode;
+			myVehicle.state_auto_run = AUTO_RUN_IDLE;
 			Vehicle_StopHard();
 			break;
 		case MODE_MANUAL:
@@ -78,7 +79,7 @@ void	Vehicle_Localization(void) {
 	// Get Lidar per 1s
 	if (myVehicle.count_lidar == 1) {
 		AtSerial_RequestPosition();
-	} else if (myVehicle.count_lidar == 10) {
+	} else if (myVehicle.count_lidar == 20) {
 		// Reset count_lidar
 		myVehicle.count_lidar = 0;
 	}
@@ -98,7 +99,7 @@ void Vehicle_EstimatePosition(uint8_t has_lidar) {
 
 	if (has_lidar) {
 		// Note: Yaw(Lidar) != Yaw(Vehicle -- heading angle)
-		heading = Pi_To_Pi(myVehicle.position_lidar.yaw + HEADING_OFFSET_LIDAR);
+		heading = Pi_To_Pi(myVehicle.position_lidar.yaw - HEADING_OFFSET_LIDAR);
 		// Center is in the middle 2 wheel
 		x_center = myVehicle.position_lidar.x + DIS_LIDAR_FRONT_WHEEL*cos(heading);
 		y_center = myVehicle.position_lidar.y + DIS_LIDAR_FRONT_WHEEL*sin(heading);
@@ -132,12 +133,12 @@ void	Vehicle_Odometry() {
 
 	yaw_old = myVehicle.position_odometry.yaw;
 	// vb
-	delta_left	= RPS2MPS(DcGetVel(&ML))*BASIC_PERIOD;
-	delta_right	= RPS2MPS(DcGetVel(&MR))*BASIC_PERIOD;
+	delta_left	= RPS2MPS(DcGetVel(&ML))*BASIC_PERIOD*FIX_EXPER;
+	delta_right	= RPS2MPS(DcGetVel(&MR))*BASIC_PERIOD*FIX_EXPER;
 	v_bx		= 0.5*(delta_left + delta_right);
 	delta_yaw 	= (delta_right - delta_left)/(DIS_TWO_WHEELS);// DIS = 2L in formula
 	// delta q_b
-	if (fabs(delta_yaw) < 0.0001) {
+	if (fabs(delta_yaw) < 0.00001) {
 		delta_xb = v_bx;
 		delta_yb = 0;
 	} else {

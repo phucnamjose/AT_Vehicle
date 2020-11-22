@@ -52,7 +52,7 @@ typedef	enum enum_MoveManual{
 }enum_MoveManual;
 
 typedef enum enum_HandMode{
-	HAND_MODE_NONE = 0,
+	HAND_MODE_HOME = 0,
 	HAND_MODE_MANUAL,
 	HAND_MODE_AUTO
 }enum_HandMode;
@@ -70,7 +70,7 @@ typedef	enum enum_HandManual{
 typedef	enum enum_HandAuto{
 	HAND_AUTO_NONE = 0,
 	HAND_AUTO_RETANGLE,
-	HAND_AUTO_DOWN
+	HAND_AUTO_CIRCLE
 }enum_HandAuto;
 
 typedef enum enum_ModeVehicle{

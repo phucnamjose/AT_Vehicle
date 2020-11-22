@@ -20,7 +20,7 @@ uint8_t moveAutoVehicle(double x, double y, uint8_t *target_data);
 uint8_t	autoStart(void);
 uint8_t	autoStop(void);
 uint8_t	handManualRobot(enum_HandManual hand_manual);
-uint8_t handAutoRobot(enum_HandManual hand_manual);
+uint8_t handAutoRobot(enum_HandAuto hand_auto);
 void 	mainTask_SendMail(mainTaskMail_t *cmd_to_main);
 
 

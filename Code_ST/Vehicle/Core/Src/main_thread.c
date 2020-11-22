@@ -92,8 +92,8 @@ void setupMainThread(void) {
 	// Init vehicle
 	Vehicle_Init();
 	// Init Stepper motor and Hand
-	StepInit(&stepUp, 0, 8, TIM5);
-	StepInit(&stepDown, 0, 15, TIM9);
+	StepInit(&stepUp, 0, 12, TIM5);
+	StepInit(&stepDown, 0, 12, TIM9);
 	HAL_TIM_PWM_Start_IT(&htim5, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start_IT(&htim9, TIM_CHANNEL_1);
 	__HAL_DBGMCU_FREEZE_TIM5();
@@ -145,17 +145,8 @@ void loopMainThread(void) {
 		DcExecuteOuput(&ML);
 	}
 
-	// 7. Run hand according to mode
-	switch (myHand.mode) {
-		case HAND_MODE_MANUAL:
-			Hand_ManualRun();
-			break;
-		case HAND_MODE_AUTO:
-			Hand_AutoRunState();
-			break;
-		default:
-			break;
-	}
+	// 7. Hand action
+	Hand_Run();
 
 	// 8.Check mail
 	is_new_mail = osMailGet(mainTaskMailHandle, 0);// If have no mail, skip
@@ -223,41 +214,41 @@ void loopMainThread(void) {
 //			//Report Servo respond END ------------------------------------------
 
 //			//Report Limit Switch BEGIN ------------------------------------------
-			uint8_t ls_up, ls_down_left, ls_down_right;
-			StepReadLimit(&stepUp, &stepDown);
-			ls_up = stepUp.limit_negative;
-			ls_down_left = stepDown.limit_negative;
-			ls_down_right = stepDown.limit_positive;
-			// Send through USB
-			char feedback[30];
-			snprintf(feedback, 30, "%d %d %d\n", (int)ls_up, (int)ls_down_left, (int)ls_down_right);
-			strcat((char *)usb_out_buff, feedback);
+//			uint8_t ls_up, ls_down_left, ls_down_right;
+//			StepReadLimit(&stepUp, &stepDown);
+//			ls_up = stepUp.limit_negative;
+//			ls_down_left = stepDown.limit_negative;
+//			ls_down_right = stepDown.limit_positive;
+//			// Send through USB
+//			char feedback[30];
+//			snprintf(feedback, 30, "%d %d %d\n", (int)ls_up, (int)ls_down_left, (int)ls_down_right);
+//			strcat((char *)usb_out_buff, feedback);
 			//Report Limit Switch END ------------------------------------------
 
 //			//Report Position BEGIN ------------------------------------------
-//			double angle, x, y;
-//			char angle_buff[20];
-//			char x_buff[20];
-//			char y_buff[20];
-//			char report_angle[60];
-//			// Lidar
-//			angle = myVehicle.position_center_veh.yaw;
-//			x	= myVehicle.position_center_veh.x;
-//			y	= myVehicle.position_center_veh.y;
-//			double2string((uint8_t *)angle_buff, angle, 6);
-//			double2string((uint8_t *)x_buff, x, 6);
-//			double2string((uint8_t *)y_buff, y, 6);
-//			snprintf(report_angle, 60, "%s %s %s ", angle_buff, x_buff, y_buff);
-//			strcat((char *)usb_out_buff, report_angle);
-//			// Odometry
-//			angle = myVehicle.position_odometry.yaw;
-//			x	= myVehicle.position_odometry.x;
-//			y	= myVehicle.position_odometry.y;
-//			double2string((uint8_t *)angle_buff, angle, 6);
-//			double2string((uint8_t *)x_buff, x, 6);
-//			double2string((uint8_t *)y_buff, y, 6);
-//			snprintf(report_angle, 60, "%s %s %s\r\n", angle_buff, x_buff, y_buff);
-//			strcat((char *)usb_out_buff, report_angle);
+			double angle, x, y;
+			char angle_buff[20];
+			char x_buff[20];
+			char y_buff[20];
+			char report_angle[60];
+			// Lidar
+			angle = myVehicle.position_center_veh.yaw;
+			x	= myVehicle.position_center_veh.x;
+			y	= myVehicle.position_center_veh.y;
+			double2string((uint8_t *)angle_buff, angle, 6);
+			double2string((uint8_t *)x_buff, x, 6);
+			double2string((uint8_t *)y_buff, y, 6);
+			snprintf(report_angle, 60, "%s %s %s ", angle_buff, x_buff, y_buff);
+			strcat((char *)usb_out_buff, report_angle);
+			// Odometry
+			angle = myVehicle.position_odometry.yaw;
+			x	= myVehicle.position_odometry.x;
+			y	= myVehicle.position_odometry.y;
+			double2string((uint8_t *)angle_buff, angle, 6);
+			double2string((uint8_t *)x_buff, x, 6);
+			double2string((uint8_t *)y_buff, y, 6);
+			snprintf(report_angle, 60, "%s %s %s\r\n", angle_buff, x_buff, y_buff);
+			strcat((char *)usb_out_buff, report_angle);
 //			//Report Position END ------------------------------------------
 		}
 	}
@@ -527,7 +518,36 @@ uint8_t handManualRobot(enum_HandManual hand_manual) {
 	return TRUE;
 }
 
-uint8_t	handAutoRobot(enum_HandManual hand_manual) {
+uint8_t	handAutoRobot(enum_HandAuto hand_auto) {
+	// Prepare next mode
+	switch (hand_auto) {
+		case HAND_AUTO_NONE:
+			myHand.mode_next_after_home = HAND_MODE_MANUAL;
+			break;
+		case HAND_AUTO_RETANGLE:
+			myHand.state_auto = HAND_AUTO_INIT;
+			myHand.type_auto = HAND_AUTO_RETANGLE;
+			myHand.mode_next_after_home = HAND_MODE_AUTO;
+			break;
+		case HAND_AUTO_CIRCLE:
+			myHand.state_auto = HAND_AUTO_INIT;
+			myHand.type_auto = HAND_AUTO_CIRCLE;
+			myHand.mode_next_after_home = HAND_MODE_AUTO;
+			break;
+		default:
+			break;
+	}
+	// Go home
+	if (HAND_MODE_HOME == myHand.mode
+		&& HOME_STATE_FOLLOW == myHand.state_homing) {
+		myHand.flag_home_soft = TRUE;
+	} else if (HAND_MODE_AUTO == myHand.mode
+			&& HAND_AUTO_RUNNING == myHand.state_auto) {
+		myHand.flag_home_soft = TRUE;
+	} else {
+		Hand_StartGoHome();
+	}
+
 	return TRUE;
 }
 

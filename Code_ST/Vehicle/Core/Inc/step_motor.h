@@ -41,7 +41,7 @@ void	StepReadLimit(Step_t *step_up, Step_t *step_down);
 uint8_t	StepWritePusle(Step_t *step_up, int8_t pulse_up, Step_t *step_down, int8_t pulse_down);
 void	StepEnable(void);
 void	StepDisable(void);
-double	StepPulse2Angle(enum_Step step, int8_t pulse);
-int8_t	StepAngle2Pulse(enum_Step step, double angle);
+double	StepPulse2Angle(enum_Step step, int32_t pulse);
+int32_t	StepAngle2Pulse(enum_Step step, double angle);
 
 #endif /* INC_STEP_MOTOR_H_ */

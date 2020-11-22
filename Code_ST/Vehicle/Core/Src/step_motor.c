@@ -9,6 +9,7 @@
 #include "step_motor.h"
 #include "system_params.h"
 #include "main.h"
+#include "math.h"
 
 /* External variables */
 extern TIM_HandleTypeDef htim5; // Step 1 on board
@@ -29,6 +30,8 @@ void	StepInit(Step_t *step,
 	step->pulse_acc	 = 0;
 	step->pulse_in_period = 0;
 	step->pulse_count_in_period = 0;
+	// Scan
+	step->pulse_scan = pulse_scan;
 	// Save timer address
 	step->TIM_PULSE = TIM_PULSE;
 	// Direction
@@ -36,12 +39,12 @@ void	StepInit(Step_t *step,
 }
 
 void	StepReadLimit(Step_t *step_up, Step_t *step_down) {
-	uint8_t level_up_neg, level_down_neg, level_down_pos;
-	level_up_neg = HAL_GPIO_ReadPin(LS_UP_GPIO_Port, LS_UP_Pin);
+	uint8_t level_up_pos, level_down_neg, level_down_pos;
+	level_up_pos = HAL_GPIO_ReadPin(LS_UP_GPIO_Port, LS_UP_Pin);
 	level_down_neg = HAL_GPIO_ReadPin(LS_DOWN_L_GPIO_Port, LS_DOWN_L_Pin);
 	level_down_pos = HAL_GPIO_ReadPin(LS_DOWN_R_GPIO_Port, LS_DOWN_R_Pin);
 
-	step_up->limit_negative 	= (LEVEL_ACTIVE_LS_UP_NEG == level_up_neg);
+	step_up->limit_positive 	= (LEVEL_ACTIVE_LS_UP_POS == level_up_pos);
 	step_down->limit_negative 	= (LEVEL_ACTIVE_LS_DOWN_NEG == level_down_neg);
 	step_down->limit_positive 	= (LEVEL_ACTIVE_LS_DOWN_POS == level_down_pos);
 }
@@ -144,7 +147,7 @@ void	StepDisable(void) {
 	HAL_GPIO_WritePin(STEP2_EN_GPIO_Port, STEP2_EN_Pin, GPIO_PIN_SET);
 }
 
-double	StepPulse2Angle(enum_Step step, int8_t pulse) {
+double	StepPulse2Angle(enum_Step step, int32_t pulse) {
 	double angle = 0;
 	if (STEP_UP == step) {
 		angle = (pulse/(RESOL_STEP_UP*MICRO_STEP_UP/RATIO_STEP_UP)*2*PI);
@@ -155,12 +158,12 @@ double	StepPulse2Angle(enum_Step step, int8_t pulse) {
 	return angle;
 }
 
-int8_t	StepAngle2Pulse(enum_Step step, double angle) {
-	int8_t pulse = 0;
+int32_t	StepAngle2Pulse(enum_Step step, double angle) {
+	int32_t pulse = 0;
 	if (STEP_UP == step) {
-		pulse = (angle*(RESOL_STEP_UP*MICRO_STEP_UP/RATIO_STEP_UP)/(2*PI));
+		pulse = round((angle*(RESOL_STEP_UP*MICRO_STEP_UP/RATIO_STEP_UP)/(2*PI)));
 	} else if (STEP_DOWN == step) {
-		pulse = (angle*(RESOL_STEP_DOWN*MICRO_STEP_DOWN/RATIO_STEP_DOWN)/(2*PI));
+		pulse = round((angle*(RESOL_STEP_DOWN*MICRO_STEP_DOWN/RATIO_STEP_DOWN)/(2*PI)));
 	}
 
 	return pulse;
