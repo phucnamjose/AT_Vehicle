@@ -11,14 +11,15 @@
 #include "def_myself.h"
 
 //	Process
-#define BASIC_PERIOD						(0.01)
+#define BASIC_PERIOD						(0.01) // second
+#define DELAY_SAMPLE_LIDAR					(25) // sample
 //	Vehicle sructure
-#define WHEEL_RADIUS	 					(0.074961978)
+#define WHEEL_RADIUS	 					(0.074961978) // m
 #define DIS_TWO_WHEELS  				   	(0.3225)
 #define DIS_LIDAR_FRONT_WHEEL				(0.37351)
-#define	HEADING_OFFSET_LIDAR				(0.082612933)
+#define	HEADING_OFFSET_LIDAR				(0.082612933) // rad
 #define RATIO_MOTOR_WHEEL					(9.0/13.0)
-#define FIX_EXPER							(1.0/1.033333333)
+#define FIX_EXPER							(1.0/1.033333333) // factor
 //	Hand structure
 #define RESOL_STEP_UP						(200)
 #define RESOL_STEP_DOWN						(400)

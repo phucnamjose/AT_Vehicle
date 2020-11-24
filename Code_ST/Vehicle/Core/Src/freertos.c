@@ -126,7 +126,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of mainTask */
-  osThreadDef(mainTask, StartMainTask, osPriorityRealtime, 0, 1280);
+  osThreadDef(mainTask, StartMainTask, osPriorityRealtime, 0, 1536);
   mainTaskHandle = osThreadCreate(osThread(mainTask), NULL);
 
   /* definition and creation of usbTask */
@@ -134,7 +134,7 @@ void MX_FREERTOS_Init(void) {
   usbTaskHandle = osThreadCreate(osThread(usbTask), NULL);
 
   /* definition and creation of rasberryTask */
-  osThreadDef(rasberryTask, StartRasTask, osPriorityNormal, 0, 512);
+  osThreadDef(rasberryTask, StartRasTask, osPriorityNormal, 0, 768);
   rasberryTaskHandle = osThreadCreate(osThread(rasberryTask), NULL);
 
   /* definition and creation of arduinoTask */
@@ -207,10 +207,10 @@ void StartRasTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  for (;;) {
+//	  for (;;) {
 		  loopRasberryThread();
-		  osThreadYield();
-	  }
+//		  osThreadYield();
+//	  }
 	  // Never go to this
     osDelay(1);
   }

@@ -21,9 +21,9 @@ Stanley_t  myStanley;
 void Stanley_Init(Stanley_t *stanley) {
 	stanley->Goal_Flag = FALSE;
 	stanley->refPointIndex = -1; // there is no point that was referred
-	stanley->K = 0.5;
-	stanley->Ksoft = 0.08;
-	stanley->Step = 0.5;
+	stanley->K = 1;
+	stanley->Ksoft = 0.15;
+	stanley->Step = 0.2;
 }
 
 
@@ -47,8 +47,11 @@ uint8_t		Stanley_InitNewPath(Stanley_t *stanley,
 	if (lenght_fake < 0.01)
 		return FALSE;
 
-	x_start_real = start_x + DIS_LIDAR_FRONT_WHEEL*cos(yaw);
-	y_start_real = start_y + DIS_LIDAR_FRONT_WHEEL*sin(yaw);
+//	x_start_real = start_x + DIS_LIDAR_FRONT_WHEEL*cos(yaw);
+//	y_start_real = start_y + DIS_LIDAR_FRONT_WHEEL*sin(yaw);
+
+	x_start_real = start_x;
+	y_start_real = start_y;
 
 	//angle_fake = atan2(delta_y, delta_x);
 	x_end_real = target_x;
@@ -63,17 +66,23 @@ uint8_t		Stanley_InitNewPath(Stanley_t *stanley,
 	lenght_real = sqrt(delta_x*delta_x + delta_y*delta_y);
 
 	int32_t	number_point;
-
-	number_point = lenght_real / STEP_REFER + 1;
+	// Star point and middle point
+	number_point = lenght_real / STEP_REFER;
 	for (int32_t i = 0; i < number_point; i++) {
 		stanley->P_X[i] = x_start_real + STEP_REFER * i * cos(angle_real);
 		stanley->P_Y[i] = y_start_real + STEP_REFER * i * sin(angle_real);
 	}
+	// End point
 	stanley->P_X[number_point] = x_end_real;
 	stanley->P_Y[number_point] = y_end_real;
 	stanley->NbOfP = number_point + 1;
+	stanley->NbOfWayPoints = stanley->NbOfP;
 
 	Stanley_UpdateRefYaw(stanley);
+
+	// Reset
+	stanley->refPointIndex = -1;
+	stanley->Goal_Flag = FALSE;
 
 	return TRUE;
 }
@@ -88,7 +97,7 @@ void Stanley_Follow(Stanley_t *stanley,
 	double dx, dy, d;
 	int32_t index_nearest = 0;
 	int32_t upper_bound, lower_bound;
-	double L = 0, Lf = 0; // L is distance from (Xc, Yc) to the front wheel
+	double L = 0.1, Lf = 0; // L is distance from (Xc, Yc) to the front wheel
 	/* Searching the nearest point */
 	// Before 5 point -- Current Point -- New 5 Point
 	if (stanley->refPointIndex == -1) {
@@ -126,24 +135,28 @@ void Stanley_Follow(Stanley_t *stanley,
 	if( index_nearest > stanley->refPointIndex )
 		stanley->refPointIndex = index_nearest;
 	// Check goal
-	stanley->goal_radius = sqrt(pow(x_current - stanley->P_X[stanley->NbOfWayPoints - 1], 2) +
-						pow(y_current - stanley->P_Y[stanley->NbOfWayPoints - 1], 2));
-	if (stanley->goal_radius < 0.2)
+	double dx_test, dy_test;
+	dx_test = x_current - stanley->P_X[stanley->NbOfWayPoints - 1];
+	dy_test = y_current - stanley->P_Y[stanley->NbOfWayPoints - 1];
+	stanley->goal_radius = sqrt(dx_test*dx_test + dy_test*dy_test);
+	if (stanley->goal_radius < 0.3)
 		stanley->Goal_Flag = TRUE;
 	// Update control law
-	stanley->efa = -((x_current - stanley->P_X[stanley->refPointIndex]) * cos(heading + PI/2) +
-				(y_current - stanley->P_Y[stanley->refPointIndex]) * sin(heading + PI/2));
+	stanley->efa = (x_current - stanley->P_X[stanley->refPointIndex]) * -cos(heading + PI/2)
+			+ (y_current - stanley->P_Y[stanley->refPointIndex]) * -sin(heading + PI/2);
 
-	stanley->Thetae = Pi_To_Pi(heading - stanley->P_Yaw[stanley->refPointIndex]); // [-pi, pi]
+	stanley->Thetae = Pi_To_Pi(stanley->P_Yaw[stanley->refPointIndex] - heading);
 
-	stanley->Thetad = -atan2( (stanley->K) * (stanley->efa) , (vel_robot + stanley->Ksoft)); // [-pi, pi]
+	if (vel_robot < 0)
+		vel_robot = 0;
+	stanley->Thetad = atan2( (stanley->K) * (stanley->efa) , (vel_robot + stanley->Ksoft));
 
-	stanley->Delta_Angle  = stanley->Thetae + stanley->Thetad;
+	stanley->Delta_Angle  = Pi_To_Pi(stanley->Thetae + stanley->Thetad);
 	// Saturation
-	if(stanley->Delta_Angle > (8*PI/9))
-		stanley->Delta_Angle = 8*PI/9;
-	else if(stanley->Delta_Angle < (-8*PI/9))
-		stanley->Delta_Angle = -8*PI/9;
+	if(stanley->Delta_Angle > PI)
+		stanley->Delta_Angle = PI;
+	else if(stanley->Delta_Angle < -PI)
+		stanley->Delta_Angle = -PI;
 }
 
 uint8_t		Stanley_IsFinish(Stanley_t *stanley) {
@@ -156,9 +169,9 @@ uint8_t		Stanley_IsFinish(Stanley_t *stanley) {
 **  @retval : none
 **/
 void Stanley_UpdateRefYaw(Stanley_t *stanley) {
-	for(int i = 0; i < stanley->NbOfP; i++) {
+	for(int i = 0; i < stanley->NbOfP - 1; i++) {
 		stanley->P_Yaw[i] = atan2(stanley->P_Y[i + 1] - stanley->P_Y[i], stanley->P_X[i + 1] - stanley->P_X[i]);
 	}
-	stanley->P_Yaw[stanley->NbOfP] = stanley->P_Yaw[stanley->NbOfP - 1];
+	stanley->P_Yaw[stanley->NbOfP - 1] = stanley->P_Yaw[stanley->NbOfP - 2];
 }
 

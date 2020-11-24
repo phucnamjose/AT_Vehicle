@@ -63,11 +63,13 @@ typedef	struct Vehicle_t
 	double				time_out_rotate_stable;
 	Position_t			position_lidar;
 	Position_t			position_center_veh;
+	Position_t			position_fusion;
 	Position_t			position_odometry;
 	uint32_t			position_lidar_count;
 	uint32_t			miss_lidar_count;
 	uint8_t				miss_lidar_flag;
 	uint8_t				count_lidar;
+	uint8_t				count_fusion;
 } Vehicle_t;
 
 /* Function Prototypes*/

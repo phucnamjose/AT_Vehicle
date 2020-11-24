@@ -10,21 +10,29 @@
 #include "stdio.h"
 #include "string.h"
 
-const char *DebugCmd_Code[]  = {"SETSPT",
-								"SETPID",
-								"START2",
-								"SSTOP2",
-								"SAVPID",
-								"GETPID",
-								"RSTPID",
-								"MOVVEH",
-								"REPONN",
-								"REPOFF",
-								"OUTPUT",
-								"SETHAN",
-								"GETSAM",
-								"RSTODO",
-								"CPYLID"};
+const char *DebugCmd_Code[]  = {"SETSPT", // 1
+								"SETPID", // 2
+								"START2", // 3
+								"SSTOP2", // 4
+								"SAVPID", // 5
+								"GETPID", // 6
+								"RSTPID", // 7
+								"MOVVEH", // 8
+								"REPONN", // 9
+								"REPOFF", // 10
+								"OUTPUT", // 11
+								"SETHAN", // 12
+								"GETSAM", // 13
+								"RSTODO", // 14
+								"CPYLID", // 15
+								"MODEVE", // 16
+								"ATMOVE", // 17
+								"SETSPD", // 18
+								"EMERGE", // 19
+								"HANDAT", // 20
+								"ATSTAR", // 21
+								"ATSTOP", // 22
+								"ATROTA"}; // 23
 
 /* Implementation*/
 
@@ -112,29 +120,77 @@ enum_DebugCmd MsgToCmd(char *message, mainTaskMail_t *arguments) {
 			return SET_OUTPUT;
 		} else
 			return CMD_NONE;
-		// 12. Set hand action auto
+		// 12. Set hand manual
 	}  else if ( 0 == strcmp(command, DebugCmd_Code[HAND_MANUAL])) {
+		lenght = sscanf(para, "%d", (int *)&(arguments->hand_manual));
+		if (lenght == 1) {
+			arguments->cmd_code = HAND_MANUAL;
+			return HAND_MANUAL;
+		} else
+			return CMD_NONE;
+		// 13. Get sample headind
+	} else if ( 0 == strcmp(command, DebugCmd_Code[GET_SAMPLE])) {
+		arguments->cmd_code = GET_SAMPLE;
+		return GET_SAMPLE;
+		// 14. Reset odometry position
+	} else if ( 0 == strcmp(command, DebugCmd_Code[RESET_ODOMETRY])) {
+		arguments->cmd_code = RESET_ODOMETRY;
+		return RESET_ODOMETRY;
+		// 15. Copy lidar position to odometry position
+	} else if ( 0 == strcmp(command, DebugCmd_Code[COPY_LIDAR_2_ODO])) {
+		arguments->cmd_code = COPY_LIDAR_2_ODO;
+		return COPY_LIDAR_2_ODO;
+		// 16. Change mode vehicle
+	} else if ( 0 == strcmp(command, DebugCmd_Code[MODE_VEHICLE])) {
+		lenght = sscanf(para, "%d", (int *)&(arguments->mode_vehicle));
+		if (lenght == 1) {
+			arguments->cmd_code = MODE_VEHICLE;
+			return MODE_VEHICLE;
+		} else
+			return CMD_NONE;
+		// 17. Auto moving to desire point
+	} else if ( 0 == strcmp(command, DebugCmd_Code[MOVE_AUTO])) {
+		lenght = sscanf(para, "%lf %lf",
+						&(arguments->target_x),
+						&(arguments->target_y));
+		if (lenght == 2) {
+			arguments->cmd_code = MOVE_AUTO;
+			return MOVE_AUTO;
+		} else
+			return CMD_NONE;
+		// 18. Change speed move
+	} else if ( 0 == strcmp(command, DebugCmd_Code[SPEED_MOVE])) {
+		lenght = sscanf(para, "%lf",
+						&(arguments->speed_move));
+		if (lenght == 1) {
+			arguments->cmd_code = SPEED_MOVE;
+			return SPEED_MOVE;
+		} else
+			return CMD_NONE;
+		// 19. Stop move and hand
+	} else if ( 0 == strcmp(command, DebugCmd_Code[EMERGENCY])) {
+		arguments->cmd_code = EMERGENCY;
+		return EMERGENCY;
+		// 20. Hand robot auto
+	} else if ( 0 == strcmp(command, DebugCmd_Code[HAND_AUTO])) {
 		lenght = sscanf(para, "%d", (int *)&(arguments->hand_auto));
 		if (lenght == 1) {
 			arguments->cmd_code = HAND_AUTO;
 			return HAND_AUTO;
 		} else
 			return CMD_NONE;
-
-		// 13. Get sample headind
-	} else if ( 0 == strcmp(command, DebugCmd_Code[GET_SAMPLE])) {
-		arguments->cmd_code = GET_SAMPLE;
-		return GET_SAMPLE;
-
-		// 14. Reset odometry position
-	} else if ( 0 == strcmp(command, DebugCmd_Code[RESET_ODOMETRY])) {
-		arguments->cmd_code = RESET_ODOMETRY;
-		return RESET_ODOMETRY;
-
-		// 15. Copy lidar to odometry
-	} else if ( 0 == strcmp(command, DebugCmd_Code[COPY_LIDAR_2_ODO])) {
-		arguments->cmd_code = COPY_LIDAR_2_ODO;
-		return COPY_LIDAR_2_ODO;
+		// 21. Start auto moving
+	} else if ( 0 == strcmp(command, DebugCmd_Code[AUTO_START])) {
+		arguments->cmd_code = AUTO_START;
+		return AUTO_START;
+		// 22. Stop auto moving
+	} else if ( 0 == strcmp(command, DebugCmd_Code[AUTO_STOP])) {
+		arguments->cmd_code = AUTO_STOP;
+		return AUTO_STOP;
+		// 23. Rotate forever
+	} else if ( 0 == strcmp(command, DebugCmd_Code[AUTO_ROTATE])) {
+		arguments->cmd_code = AUTO_ROTATE;
+		return AUTO_ROTATE;
 
 		// Wrong code
 	} else {

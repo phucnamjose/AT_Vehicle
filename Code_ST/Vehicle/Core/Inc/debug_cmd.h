@@ -28,9 +28,8 @@ typedef	enum enum_DebugCmd{
 	GET_SAMPLE,			// 13. Read sample angular
 	RESET_ODOMETRY,		// 14. Reset odometry intergrate
 	COPY_LIDAR_2_ODO,	// 15. Copy lidar position to odometry position
-
 	MODE_VEHICLE,		// 16. Change mode vehicle
-	MOVE_AUTO,			// 17. Start - stop auto run
+	MOVE_AUTO,			// 17. Auto moving to desire point
 	SPEED_MOVE,			// 18. Change speed move
 	EMERGENCY,			// 19. Stop move and hand
 	HAND_AUTO,			// 20. Hand robot auto

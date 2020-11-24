@@ -122,7 +122,7 @@ uint8_t	Head_PID_RunBlackBox(HeadPID_t *pid) {
 }
 
 void	Head_PID_SetOuput(HeadPID_t *pid, double vel) {
-	double vel_each = MPS2RPS(vel)*0.5*0.25;// max: 0.125 each
+	double vel_each = MPS2RPS(vel)*0.5*0.5;// max: 0.25 each
 	PID_Setpoint(&pid_MR, vel_each);
 	PID_Setpoint(&pid_ML, -vel_each);
 }

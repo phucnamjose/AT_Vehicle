@@ -16,7 +16,7 @@
 #include "def_myself.h"
 #include "dc_servo.h"
 #include "pid_heading.h"
-
+#include "FIFO_buff.h"
 
 
 /* External Variables */
@@ -28,6 +28,9 @@ extern Fuzzy_t     	myFuzzy;
 extern HeadPID_t	head_pid;
 extern Stanley_t  	myStanley;
 
+extern FifoBuff_t fifo_delta_x;
+extern FifoBuff_t fifo_delta_y;
+extern FifoBuff_t fifo_delta_yaw;
 /* Internal Variables */
 Vehicle_t 		myVehicle;
 
@@ -42,6 +45,9 @@ void	Vehicle_Init() {
 	myVehicle.miss_lidar_count		= 0;
 	myVehicle.speed_manual			= 1;
 	myVehicle.speed_auto			= 1; // 100%
+	myVehicle.count_lidar			= 0;
+	myVehicle.count_fusion			= 0;
+	myVehicle.count_auto			= 0;
 	Fuzzy_Init();
 	Head_PID_Init();
 	Stanley_Init(&myStanley);
@@ -50,12 +56,11 @@ void	Vehicle_Init() {
 
 void Vehicle_ChangeMode(enum_ModeVehicle mode) {
 	switch (mode) {
-		case MODE_AUTO:
+		case MODE_MANUAL:
 			myVehicle.mode_vehicle = mode;
-			myVehicle.state_auto_run = AUTO_RUN_IDLE;
 			Vehicle_StopHard();
 			break;
-		case MODE_MANUAL:
+		case MODE_AUTO:
 			myVehicle.mode_vehicle = mode;
 			Vehicle_StopHard();
 			break;
@@ -79,7 +84,7 @@ void	Vehicle_Localization(void) {
 	// Get Lidar per 1s
 	if (myVehicle.count_lidar == 1) {
 		AtSerial_RequestPosition();
-	} else if (myVehicle.count_lidar == 20) {
+	} else if (myVehicle.count_lidar == 100) {
 		// Reset count_lidar
 		myVehicle.count_lidar = 0;
 	}
@@ -107,17 +112,35 @@ void Vehicle_EstimatePosition(uint8_t has_lidar) {
 		myVehicle.position_center_veh.x 	= x_center;
 		myVehicle.position_center_veh.y 	= y_center;
 		myVehicle.position_center_veh.yaw 	= heading;
-		// Update base position for odometry method
-//		memcpy(&(myVehicle.position_odometry),
-//			&(myVehicle.position_center_veh), sizeof(Position_t));
+
+		// Add odometry delta because of delay
+		myVehicle.count_fusion++;
+		if (myVehicle.count_fusion == 1) {
+			myVehicle.count_fusion = 0;
+			double delta_x, delta_y, r, delta_theta, x_fusion, y_fusion, yaw_fusion;
+			delta_x = FifoGetSum(&fifo_delta_x);
+			delta_y = FifoGetSum(&fifo_delta_y);
+			r = sqrt(delta_x*delta_x + delta_y*delta_y);
+			delta_theta = FifoGetSum(&fifo_delta_yaw);
+			yaw_fusion = Pi_To_Pi(heading + delta_theta);
+			x_fusion = x_center + r*cos(yaw_fusion);
+			y_fusion = y_center + r*sin(yaw_fusion);
+			// Update fusion
+			myVehicle.position_fusion.x 	= x_fusion;
+			myVehicle.position_fusion.y 	= y_fusion;
+			myVehicle.position_fusion.yaw 	= yaw_fusion;
+			// Update base position for odometry method
+			memcpy(&(myVehicle.position_odometry),
+				&(myVehicle.position_fusion), sizeof(Position_t));
+		}
 		myVehicle.miss_lidar_count 	= 0;
 		myVehicle.miss_lidar_flag	= FALSE;
 	} else {
 		// Use result from odometry
-//		memcpy(&(myVehicle.position_center_veh),
-//			&(myVehicle.position_odometry), sizeof(Position_t));
-		// Check miss lidar. If > 3s == Stop
-		if (++myVehicle.miss_lidar_count > 500) {
+		memcpy(&(myVehicle.position_fusion),
+			&(myVehicle.position_odometry), sizeof(Position_t));
+		// Check miss lidar. If > 10s == Stop
+		if (++myVehicle.miss_lidar_count > 10) {
 			myVehicle.miss_lidar_flag	= TRUE;
 		}
 	}
@@ -156,6 +179,10 @@ void	Vehicle_Odometry() {
 	myVehicle.position_odometry.x 	= x_new;
 	myVehicle.position_odometry.y 	= y_new;
 	myVehicle.position_odometry.yaw = yaw_new;
+	// Save delta to FIFO buffer
+	FifoPushSample(&fifo_delta_x, delta_x);
+	FifoPushSample(&fifo_delta_y, delta_y);
+	FifoPushSample(&fifo_delta_yaw, delta_yaw);
 }
 
 void Vehicle_ResetOdometry(void) {
@@ -172,10 +199,11 @@ void Vehicle_AutoDrive(void) {
 	double v_vehicle;
 	double x_current, y_current, yaw_current;
 	double v_long_left, v_long_right;
+	double delta_angle;
 
-	x_current 	= myVehicle.position_center_veh.x;
-	y_current	= myVehicle.position_center_veh.y;
-	yaw_current	= myVehicle.position_center_veh.yaw;
+	x_current 	= myVehicle.position_fusion.x;
+	y_current	= myVehicle.position_fusion.y;
+	yaw_current	= myVehicle.position_fusion.yaw;
 
 	v_left		= RPS2MPS(DcGetVel(&ML));
 	v_right		= RPS2MPS(DcGetVel(&MR));
@@ -183,7 +211,8 @@ void Vehicle_AutoDrive(void) {
 	// Stanley Controller
 	Stanley_Follow(&myStanley, x_current, y_current, yaw_current, v_vehicle);
 	// Fuzzy Controller
-	myFuzzy.Set_Angle 	= Pi_To_Pi(yaw_current + myStanley.Delta_Angle);
+	delta_angle = myStanley.Delta_Angle;
+	myFuzzy.Set_Angle 	= Pi_To_Pi(yaw_current + delta_angle);
 	myFuzzy.Angle		= yaw_current;
 	Fuzzy_UpdateInput(&myFuzzy);
 	myFuzzy.Fuzzy_Out = Fuzzy_Defuzzification_Max_Min(myFuzzy.Fuzzy_Error,
@@ -192,13 +221,18 @@ void Vehicle_AutoDrive(void) {
 	myVehicle.speed_auto_current = myVehicle.speed_auto*VEH_MAX_AUTO;
 	if (myFuzzy.Fuzzy_Out >= 0) {
 		// Turn left
-		v_long_right = (1 - fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
-		v_long_left	 = (1 + fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
-	} else {
-		// Turn right
 		v_long_right = (1 + fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
 		v_long_left	 = (1 - fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
+	} else {
+		// Turn right
+		v_long_right = (1 - fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
+		v_long_left	 = (1 + fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
 	}
+
+	// Check if cross-track error ->0 , thetae -> 0 then go ahead, not through fuzzy
+
+
+
 	Vehicle_SetLinearVel(v_long_right, v_long_left);// m/s
 }
 
@@ -206,7 +240,7 @@ void	Vehicle_TestFuzzy(void) {
 	double yaw_current;
 	double v_long_left, v_long_right;
 
-	yaw_current	= myVehicle.position_center_veh.yaw;
+	yaw_current	= myVehicle.position_fusion.yaw;
 
 	// Fuzzy Controller
 	myFuzzy.Set_Angle 	= Pi_To_Pi(myVehicle.target_yaw);
@@ -230,7 +264,7 @@ void	Vehicle_TestFuzzy(void) {
 	// Check stable
 	double angle_error;
 	angle_error = Pi_To_Pi(myVehicle.target_yaw - yaw_current);
-	if (fabs(angle_error) < PI/36) {
+	if (fabs(angle_error) < PI/72) {
 		myVehicle.time_out_rotate_stable += 0.05;
 	} else {
 		myVehicle.time_out_rotate_stable = 0;
@@ -242,25 +276,24 @@ void	Vehicle_TestHeadPID(void) {
 	double v_long_left, v_long_right;
 	double output;
 
-	yaw_current	= myVehicle.position_center_veh.yaw;
-
+	yaw_current	= myVehicle.position_fusion.yaw;
 	// PID heading controller
 	myVehicle.speed_auto_current = myVehicle.speed_auto*VEH_MAX_AUTO;
-	Head_PID_SetSaturation(&head_pid, myVehicle.speed_auto_current);
+	Head_PID_SetSaturation(&head_pid, 2*myVehicle.speed_auto_current);
 	Head_PID_SetPoint(&head_pid, Pi_To_Pi(myVehicle.target_yaw));
 	Head_PID_UpdateFeedback(&head_pid, yaw_current);
 	Head_PID_Compute(&head_pid);
 	output = Head_PID_GetOutputEach(&head_pid);
 
 	// Update setpoint
-	v_long_right 	= output; // m/s
-	v_long_left		= -output;
+	v_long_right 	= -output; // m/s
+	v_long_left		= output;
 	Vehicle_SetLinearVel(v_long_right, v_long_left);
 
 	// Check stable
 	double angle_error;
 	angle_error = Pi_To_Pi(myVehicle.target_yaw - yaw_current);
-	if (fabs(angle_error) < PI/36) {
+	if (fabs(angle_error) < PI/72) {
 		myVehicle.time_out_rotate_stable += 0.05;
 	} else {
 		myVehicle.time_out_rotate_stable = 0;
@@ -268,11 +301,11 @@ void	Vehicle_TestHeadPID(void) {
 }
 
 void	Vehicle_AutoNewTarget(double target_x, double target_y, uint8_t *target_data) {
-	// Test fuzzy
-	myVehicle.target_yaw = target_x;
+//	// Test fuzzy
+//	myVehicle.target_yaw = target_x;
 
 	// Save target
-	// myVehicle.target_x = target_x; // Target of Lidar, need to convert to center
+	 myVehicle.target_x = target_x;
 	myVehicle.target_y = target_y;
 	memcpy(&(myVehicle.target_frame[0]), target_data, LENGHT_CMD_AUTO_MOVE);
 	// Switch state
@@ -293,42 +326,43 @@ void	Vehicle_AutoRunState() {
 	switch (myVehicle.state_auto_run) {
 		case AUTO_RUN_IDLE:
 			// Do nothing
-			__NOP();
 			break;
 		case AUTO_RUN_NEW_TARGET:
-			__NOP();
-//			// Start point
-//			myVehicle.start_x = myVehicle.position_lidar.x;
-//			myVehicle.start_y = myVehicle.position_lidar.y;
-//			// Init new path in stanley controller
-//			if (Stanley_InitNewPath(&myStanley,
-//								myVehicle.target_x, myVehicle.target_y,
-//								myVehicle.start_x, myVehicle.start_y,
-//								myVehicle.position_center_veh.yaw)) {
-//				// Go to the next state
-//				myVehicle.state_auto_run = AUTO_RUN_WAIT_START;
-//			} else {
-//				// Return wait new target
-//				myVehicle.state_auto_run = AUTO_RUN_IDLE;
-//			}
-			myVehicle.state_auto_run = AUTO_RUN_WAIT_START;
+			// Start point
+			myVehicle.start_x = myVehicle.position_fusion.x;
+			myVehicle.start_y = myVehicle.position_fusion.y;
+			// Init new path in stanley controller
+			if (Stanley_InitNewPath(&myStanley,
+								myVehicle.target_x, myVehicle.target_y,
+								myVehicle.start_x, myVehicle.start_y,
+								myVehicle.position_fusion.yaw)) {
+				// Go to the next state
+				myVehicle.state_auto_run = AUTO_RUN_WAIT_START;
+			} else {
+				// Return wait new target
+				myVehicle.state_auto_run = AUTO_RUN_IDLE;
+			}
 			break;
 		case AUTO_RUN_WAIT_START:
-			// Do nothing
-			__NOP();
+			myVehicle.count_auto = 0;
 			break;
 		case AUTO_RUN_MOVING:
-			//Vehicle_AutoDrive();
-			Vehicle_TestFuzzy();
-			if (myVehicle.time_out_rotate_stable >= 1) {
-				myVehicle.state_auto_run = AUTO_RUN_FINISH;
-			}
+			myVehicle.count_auto++;
+			if (myVehicle.count_auto == 5) {
+				myVehicle.count_auto = 0; // Period 50ms
 
-			// Check finish
-//			if (Stanley_IsFinish(&myStanley)) {
-//				Vehicle_StopHard();
-//				myVehicle.state_auto_run = AUTO_RUN_FINISH;
-//			}
+				//Vehicle_TestFuzzy();
+//				if (myVehicle.time_out_rotate_stable >= 0.5) {
+//					myVehicle.state_auto_run = AUTO_RUN_FINISH;
+//				}
+
+				Vehicle_AutoDrive();
+				 //Check finish
+				if (Stanley_IsFinish(&myStanley)) {
+					myVehicle.state_auto_run = AUTO_RUN_FINISH;
+					Vehicle_StopHard();
+				}
+			}
 			break;
 		case AUTO_RUN_FINISH:
 			// Stop vehicle

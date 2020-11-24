@@ -18,6 +18,7 @@
 #include "pid_heading.h"
 #include "step_motor.h"
 #include "hand_robot.h"
+#include "stanley_controller.h"
 
 /* External variable*/
 // Peripherals MCU
@@ -33,7 +34,8 @@ extern DcServo_t 		MR;
 extern DcServo_t 		ML;
 extern PID_t 			pid_MR;
 extern PID_t 			pid_ML;
-extern HeadPID_t	head_pid;
+extern HeadPID_t		head_pid;
+extern Stanley_t 	 	myStanley;
 extern Vehicle_t 		myVehicle;
 extern Step_t			stepDown;
 extern Step_t			stepUp;
@@ -49,15 +51,15 @@ uint8_t			count_read_head;
 // Buffer
 uint8_t 		usb_out_buff[200];
 uint8_t			pi_out_buff[200];
-uint8_t 		setR[20];
-uint8_t 		setL[20];
-uint8_t			fbackR[20];
-uint8_t			fbackL[20];
-uint8_t 		kp_buff[20];
-uint8_t 		ki_buff[20];
-uint8_t 		kd_buff[20];
-uint8_t 		v_buff[20];
-uint8_t 		yaw_buff[20];
+uint8_t 		setR[12];
+uint8_t 		setL[12];
+uint8_t			fbackR[12];
+uint8_t			fbackL[12];
+uint8_t 		kp_buff[12];
+uint8_t 		ki_buff[12];
+uint8_t 		kd_buff[12];
+uint8_t 		v_buff[12];
+uint8_t 		yaw_buff[12];
 // Mail
 mainTaskMail_t 	command;
 mainTaskMail_t 	*mail;
@@ -146,7 +148,7 @@ void loopMainThread(void) {
 	}
 
 	// 7. Hand action
-	Hand_Run();
+	//Hand_Run();
 
 	// 8.Check mail
 	is_new_mail = osMailGet(mainTaskMailHandle, 0);// If have no mail, skip
@@ -164,10 +166,10 @@ void loopMainThread(void) {
 		is_new_command = FALSE;
 	}
 
-	// 10.Report per 100ms
+	// 10.Report per 500ms
 	if (Report_flag) {
 		count_report++;
-		if (count_report == 10) {
+		if (count_report == 50) {
 			// Reset count report
 			count_report = 0;
 
@@ -225,30 +227,59 @@ void loopMainThread(void) {
 //			strcat((char *)usb_out_buff, feedback);
 			//Report Limit Switch END ------------------------------------------
 
+
+			// Stanley output
+			double efa, theta_e, theta_d;
+			int32_t ref_idx;
+			efa = myStanley.efa;
+			theta_e = myStanley.Thetae;
+			theta_d = myStanley.Thetad;
+			ref_idx = myStanley.refPointIndex;
+			char efa_buff[12];
+			char thetae_buff[12];
+			char thetad_buff[12];
+			char report_stanley[60];
+			double2string((uint8_t *)efa_buff, efa, 6);
+			double2string((uint8_t *)thetad_buff, theta_e, 6);
+			double2string((uint8_t *)thetae_buff, theta_d, 6);
+			snprintf(report_stanley, 45, "%s %s %s %d ",
+					efa_buff, thetae_buff, thetad_buff, (int)ref_idx);
+			strcat((char *)usb_out_buff, report_stanley);
+
 //			//Report Position BEGIN ------------------------------------------
 			double angle, x, y;
-			char angle_buff[20];
-			char x_buff[20];
-			char y_buff[20];
-			char report_angle[60];
-			// Lidar
-			angle = myVehicle.position_center_veh.yaw;
-			x	= myVehicle.position_center_veh.x;
-			y	= myVehicle.position_center_veh.y;
+			char angle_buff[12];
+			char x_buff[12];
+			char y_buff[12];
+			char report_angle[45];
+//			// Lidar
+//			angle = myVehicle.position_center_veh.yaw;
+//			x	= myVehicle.position_center_veh.x;
+//			y	= myVehicle.position_center_veh.y;
+//			double2string((uint8_t *)angle_buff, angle, 6);
+//			double2string((uint8_t *)x_buff, x, 6);
+//			double2string((uint8_t *)y_buff, y, 6);
+//			snprintf(report_angle, 60, "%s %s %s ", angle_buff, x_buff, y_buff);
+//			strcat((char *)usb_out_buff, report_angle);
+			// Fusion
+			angle = myVehicle.position_fusion.yaw;
+			x	= myVehicle.position_fusion.x;
+			y	= myVehicle.position_fusion.y;
 			double2string((uint8_t *)angle_buff, angle, 6);
 			double2string((uint8_t *)x_buff, x, 6);
 			double2string((uint8_t *)y_buff, y, 6);
-			snprintf(report_angle, 60, "%s %s %s ", angle_buff, x_buff, y_buff);
+			snprintf(report_angle, 45, "%s %s %s\r\n", angle_buff, x_buff, y_buff);
 			strcat((char *)usb_out_buff, report_angle);
 			// Odometry
-			angle = myVehicle.position_odometry.yaw;
-			x	= myVehicle.position_odometry.x;
-			y	= myVehicle.position_odometry.y;
-			double2string((uint8_t *)angle_buff, angle, 6);
-			double2string((uint8_t *)x_buff, x, 6);
-			double2string((uint8_t *)y_buff, y, 6);
-			snprintf(report_angle, 60, "%s %s %s\r\n", angle_buff, x_buff, y_buff);
-			strcat((char *)usb_out_buff, report_angle);
+//			angle = myVehicle.position_odometry.yaw;
+//			x	= myVehicle.position_odometry.x;
+//			y	= myVehicle.position_odometry.y;
+//			double2string((uint8_t *)angle_buff, angle, 6);
+//			double2string((uint8_t *)x_buff, x, 6);
+//			double2string((uint8_t *)y_buff, y, 6);
+//			snprintf(report_angle, 60, "%s %s %s\r\n", angle_buff, x_buff, y_buff);
+//			strcat((char *)usb_out_buff, report_angle);
+
 //			//Report Position END ------------------------------------------
 		}
 	}
@@ -329,7 +360,6 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		// 9.
 		case REPORT_ON:
 			Report_flag = TRUE;
-			count_report = myVehicle.count_lidar;
 			break;
 		// 10.
 		case REPORT_OFF:
@@ -359,6 +389,7 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 			Vehicle_CopyLidar();
 			strcat((char *)usb_out_buff, "Copied LIDAR\n");
 			break;
+
 		// 16.
 		case MODE_VEHICLE:
 			Vehicle_ChangeMode(cmd.mode_vehicle);
@@ -367,6 +398,7 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		// 17.
 		case MOVE_AUTO:
 			moveAutoVehicle(cmd.target_x, cmd.target_y, cmd.target_frame);
+			strcat((char *)usb_out_buff, "New point AUTOMOVE\n");
 			break;
 		// 18.
 		case SPEED_MOVE:
@@ -375,7 +407,7 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 			break;
 		// 19.
 		case EMERGENCY:
-			// TODO:
+			Vehicle_AutoStop();
 			break;
 		// 20.
 		case HAND_AUTO:
@@ -384,10 +416,12 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		// 21.
 		case AUTO_START:
 			autoStart();
+			strcat((char *)usb_out_buff, "Start AUTOMOVE\n");
 			break;
 		// 22.
 		case AUTO_STOP:
 			autoStop();
+			strcat((char *)usb_out_buff, "Stop AUTOMOVE\n");
 			break;
 		// 23.
 		case AUTO_ROTATE:
@@ -482,35 +516,18 @@ uint8_t handManualRobot(enum_HandManual hand_manual) {
 	switch (hand_manual) {
 		case HAND_MAN_STOP:
 			Hand_Stop();
-			strcat((char *)usb_out_buff, "STOP\n");
 			break;
-//		case HAND_MAN_UP:
-//			Hand_Up();
-//			break;
-//		case HAND_MAN_DOWN:
-//			Hand_Down();
-//			break;
-//		case HAND_MAN_LEFT:
-//			Hand_Left();
-//			break;
-//		case HAND_MAN_RIGHT:
-//			Hand_Right();
-//			break;
 		case HAND_MAN_UP:
-			Hand_Left();
-			strcat((char *)usb_out_buff, "LEFT\n");
+			Hand_Up();
 			break;
 		case HAND_MAN_DOWN:
-			Hand_Right();
-			strcat((char *)usb_out_buff, "RIGHT\n");
+			Hand_Down();
 			break;
 		case HAND_MAN_LEFT:
-			Hand_Up();
-			strcat((char *)usb_out_buff, "UP\n");
+			Hand_Left();
 			break;
 		case HAND_MAN_RIGHT:
-			Hand_Down();
-			strcat((char *)usb_out_buff, "DOWN\n");
+			Hand_Right();
 			break;
 		default:
 			break;
