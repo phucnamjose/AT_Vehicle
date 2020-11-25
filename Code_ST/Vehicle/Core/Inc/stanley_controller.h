@@ -10,20 +10,26 @@
 
 
 #include "def_myself.h"
+#include "geometry.h"
 
 
 #define STEP_REFER	(0.2)
 #define SEARCH_OFFSET                    	(5) // for nearest point searching
 
+
 typedef struct Stanley_t {
 	/* Robot statictis */
 	double              goal_radius; // radius between goal and current position
-	double              efa;
-	double				x_start;
-	double				y_start;
-	double				x_end;
-	double				y_end;
+	double				distance_goal_line;
+	double				distance_begin_line;
+	Point_t				point_begin;
+	Point_t				point_goal;
+	Line_t				line_begin;
+	Line_t				line_goal;
+	double				angle_go;
+	uint8_t				flag_rotate_first;
 	/* Stanley_t control variables */
+	double              efa;
 	double              Thetae;
 	double              Thetad;
 	double              Delta_Angle;
@@ -42,6 +48,7 @@ typedef struct Stanley_t {
 	uint8_t         	Goal_Flag;
 } Stanley_t;
 
+
 /*  Function Prototypes*/
 void        Stanley_Init(Stanley_t *stanley);
 uint8_t		Stanley_InitNewPath(Stanley_t *stanley,
@@ -53,5 +60,7 @@ void        Stanley_Follow(Stanley_t *stanley,
 							double heading, double vel_robot);
 uint8_t		Stanley_IsFinish(Stanley_t *stanley);
 void        Stanley_UpdateRefYaw(Stanley_t *stanley);
+uint8_t		Stanley_CheckRotateFlag(void);
+void		Stanley_ClearRotateFlag(void);
 
 #endif /* INC_STANLEY_CONTROLLER_H_ */

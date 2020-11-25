@@ -229,21 +229,24 @@ void loopMainThread(void) {
 
 
 			// Stanley output
-			double efa, theta_e, theta_d;
+			double efa, theta_e, theta_d, v_current;
 			int32_t ref_idx;
 			efa = myStanley.efa;
 			theta_e = myStanley.Thetae;
 			theta_d = myStanley.Thetad;
 			ref_idx = myStanley.refPointIndex;
+			v_current = myVehicle.speed_auto_current;
 			char efa_buff[12];
 			char thetae_buff[12];
 			char thetad_buff[12];
+			char speed_buff[12];
 			char report_stanley[60];
 			double2string((uint8_t *)efa_buff, efa, 6);
 			double2string((uint8_t *)thetad_buff, theta_e, 6);
 			double2string((uint8_t *)thetae_buff, theta_d, 6);
-			snprintf(report_stanley, 45, "%s %s %s %d ",
-					efa_buff, thetae_buff, thetad_buff, (int)ref_idx);
+			double2string((uint8_t *)speed_buff, v_current, 6);
+			snprintf(report_stanley, 60, "%s %s %s %d %s ",
+					efa_buff, thetae_buff, thetad_buff, (int)ref_idx, speed_buff);
 			strcat((char *)usb_out_buff, report_stanley);
 
 //			//Report Position BEGIN ------------------------------------------
@@ -297,19 +300,19 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		case SET_SETPOINT:
 			PID_Setpoint(&pid_MR, cmd.setpoint_right);
 			PID_Setpoint(&pid_ML, cmd.setpoint_left);
-			strcat((char *)usb_out_buff, "Changed SETPOINT\n");
+			strcat((char *)usb_out_buff, "Changed SETPOINT\r\n");
 			break;
 		// 2.
 		case SET_PID:
 			PID_SetFactor(&pid_MR, cmd.R_kp, cmd.R_ki, cmd.R_kd);
 			PID_SetFactor(&pid_ML, cmd.L_kp, cmd.L_ki, cmd.L_kd);
-			strcat((char *)usb_out_buff, "Changed PID\n");
+			strcat((char *)usb_out_buff, "Changed PID\r\n");
 			break;
 		// 3.
 		case START:
 			Run_PID_flag 	= TRUE;
 			Execute_flag	= TRUE;
-			strcat((char *)usb_out_buff, "Started EXE\n");
+			strcat((char *)usb_out_buff, "Started EXE\r\n");
 			break;
 		// 4.
 		case STOP:
@@ -317,12 +320,12 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 			DcStopMotor(&ML);
 			Run_PID_flag 	= FALSE;
 			Execute_flag	= FALSE;
-			strcat((char *)usb_out_buff, "Stopped EXE\n");
+			strcat((char *)usb_out_buff, "Stopped EXE\r\n");
 			break;
 		// 5.
 		case SAVE_PID:
 			// Write Flash file
-			strcat((char *)usb_out_buff, "Saved PID to Flash\n");
+			strcat((char *)usb_out_buff, "Saved PID to Flash\r\n");
 			break;
 		// 6.
 		case GET_PID:
@@ -337,13 +340,13 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 			double2string(ki_buff, ki_r, 6);
 			double2string(kd_buff, kd_r, 6);
 			char report[50];
-			snprintf(report, 50, "Right: %s %s %s\n", kp_buff, ki_buff, kd_buff);
+			snprintf(report, 50, "Right: %s %s %s\r\n", kp_buff, ki_buff, kd_buff);
 			strcat((char *)usb_out_buff, report);
 			// Convert left
 			double2string(kp_buff, kp_l, 6);
 			double2string(ki_buff, ki_l, 6);
 			double2string(kd_buff, kd_l, 6);
-			snprintf(report, 50, "Left: %s %s %s\n", kp_buff, ki_buff, kd_buff);
+			snprintf(report, 50, "Left: %s %s %s\r\n", kp_buff, ki_buff, kd_buff);
 			strcat((char *)usb_out_buff, report);
 		}
 			break;
@@ -351,7 +354,7 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		case RESET_PID:
 			PID_Reset(&pid_MR);
 			PID_Reset(&pid_ML);
-			strcat((char *)usb_out_buff, "RESET PID\n");
+			strcat((char *)usb_out_buff, "RESET PID\r\n");
 			break;
 		// 8.
 		case MOVE_MANUAL:
@@ -369,7 +372,7 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		case SET_OUTPUT:
 			DcSetOuput(&MR, cmd.R_output);
 			DcSetOuput(&ML, cmd.L_output);
-			strcat((char *)usb_out_buff, "Changed OUTPUT\n");
+			strcat((char *)usb_out_buff, "Changed OUTPUT\r\n");
 			break;
 		// 12.
 		case HAND_MANUAL:
@@ -382,28 +385,28 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		// 14.
 		case RESET_ODOMETRY:
 			Vehicle_ResetOdometry();
-			strcat((char *)usb_out_buff, "Reset ODOMETRY\n");
+			strcat((char *)usb_out_buff, "Reset ODOMETRY\r\n");
 			break;
 		// 15.
 		case COPY_LIDAR_2_ODO:
 			Vehicle_CopyLidar();
-			strcat((char *)usb_out_buff, "Copied LIDAR\n");
+			strcat((char *)usb_out_buff, "Copied LIDAR\r\n");
 			break;
 
 		// 16.
 		case MODE_VEHICLE:
 			Vehicle_ChangeMode(cmd.mode_vehicle);
-			strcat((char *)usb_out_buff, "Changed MODE\n");
+			strcat((char *)usb_out_buff, "Changed MODE\r\n");
 			break;
 		// 17.
 		case MOVE_AUTO:
 			moveAutoVehicle(cmd.target_x, cmd.target_y, cmd.target_frame);
-			strcat((char *)usb_out_buff, "New point AUTOMOVE\n");
+			strcat((char *)usb_out_buff, "New point AUTOMOVE\r\n");
 			break;
 		// 18.
 		case SPEED_MOVE:
 			Vehicle_ChangeSpeed(cmd.speed_move);
-			strcat((char *)usb_out_buff, "Changed SPEED\n");
+			strcat((char *)usb_out_buff, "Changed SPEED\r\n");
 			break;
 		// 19.
 		case EMERGENCY:
@@ -416,12 +419,12 @@ void 	decisionAccordingCmd(mainTaskMail_t cmd) {
 		// 21.
 		case AUTO_START:
 			autoStart();
-			strcat((char *)usb_out_buff, "Start AUTOMOVE\n");
+			strcat((char *)usb_out_buff, "Start AUTOMOVE\r\n");
 			break;
 		// 22.
 		case AUTO_STOP:
 			autoStop();
-			strcat((char *)usb_out_buff, "Stop AUTOMOVE\n");
+			strcat((char *)usb_out_buff, "Stop AUTOMOVE\r\n");
 			break;
 		// 23.
 		case AUTO_ROTATE:

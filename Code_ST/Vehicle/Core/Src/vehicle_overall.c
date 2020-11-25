@@ -200,11 +200,11 @@ void Vehicle_AutoDrive(void) {
 	double x_current, y_current, yaw_current;
 	double v_long_left, v_long_right;
 	double delta_angle;
-
+	// current pose
 	x_current 	= myVehicle.position_fusion.x;
 	y_current	= myVehicle.position_fusion.y;
 	yaw_current	= myVehicle.position_fusion.yaw;
-
+	// current linear velocity
 	v_left		= RPS2MPS(DcGetVel(&ML));
 	v_right		= RPS2MPS(DcGetVel(&MR));
 	v_vehicle	= 0.5*(v_left + v_right);
@@ -217,8 +217,28 @@ void Vehicle_AutoDrive(void) {
 	Fuzzy_UpdateInput(&myFuzzy);
 	myFuzzy.Fuzzy_Out = Fuzzy_Defuzzification_Max_Min(myFuzzy.Fuzzy_Error,
 													myFuzzy.Fuzzy_Error_dot);
+	// Change auto linear speed
+	double speed;
+	// Accelerate
+	if (myStanley.distance_begin_line < 0)
+	{
+		speed = myVehicle.speed_auto*VEH_MIN_AUTO;
+	} else if (myStanley.distance_begin_line < 0.4) {
+		speed = myVehicle.speed_auto*(VEH_MIN_AUTO
+				+ (VEH_MAX_AUTO-VEH_MIN_AUTO)*myStanley.distance_begin_line/0.4);
+	} else {
+		speed = myVehicle.speed_auto*VEH_MAX_AUTO;
+	}
+	// Decelerate
+	if (myStanley.distance_goal_line < 0.4) {
+		speed = myVehicle.speed_auto*(VEH_MAX_AUTO
+				- (VEH_MAX_AUTO-VEH_MIN_AUTO)*(0.4 - myStanley.distance_goal_line)/0.4);
+	} else if (myStanley.distance_goal_line < 0) {
+		speed = myVehicle.speed_auto*VEH_MIN_AUTO;
+	}
+
 	// Update setpoint
-	myVehicle.speed_auto_current = myVehicle.speed_auto*VEH_MAX_AUTO;
+	myVehicle.speed_auto_current = speed;
 	if (myFuzzy.Fuzzy_Out >= 0) {
 		// Turn left
 		v_long_right = (1 + fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
@@ -229,14 +249,16 @@ void Vehicle_AutoDrive(void) {
 		v_long_left	 = (1 + fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
 	}
 
-	// Check if cross-track error ->0 , thetae -> 0 then go ahead, not through fuzzy
-
-
+	// Check if cross-track error ->0 , thetae -> 0 then go straigh, not through fuzzy
+	if ((fabs(myStanley.efa) < 0.02) && (fabs(myStanley.Thetae) < 0.04)) {
+		v_long_right 	= myVehicle.speed_auto_current;
+		v_long_left		= myVehicle.speed_auto_current;
+	}
 
 	Vehicle_SetLinearVel(v_long_right, v_long_left);// m/s
 }
 
-void	Vehicle_TestFuzzy(void) {
+void	Vehicle_RotateFuzzy(void) {
 	double yaw_current;
 	double v_long_left, v_long_right;
 
@@ -249,7 +271,7 @@ void	Vehicle_TestFuzzy(void) {
 	myFuzzy.Fuzzy_Out = Fuzzy_Defuzzification_Max_Min(myFuzzy.Fuzzy_Error,
 													myFuzzy.Fuzzy_Error_dot);
 	// Update setpoint
-	myVehicle.speed_auto_current = myVehicle.speed_auto*VEH_MAX_AUTO;
+	myVehicle.speed_auto_current = myVehicle.speed_auto*VEH_AUTO_ROTATE;
 	if (myFuzzy.Fuzzy_Out >= 0) {
 		// Turn left
 		v_long_right 	= (fabs(myFuzzy.Fuzzy_Out))*myVehicle.speed_auto_current;
@@ -278,7 +300,7 @@ void	Vehicle_TestHeadPID(void) {
 
 	yaw_current	= myVehicle.position_fusion.yaw;
 	// PID heading controller
-	myVehicle.speed_auto_current = myVehicle.speed_auto*VEH_MAX_AUTO;
+	myVehicle.speed_auto_current = myVehicle.speed_auto*VEH_AUTO_ROTATE;
 	Head_PID_SetSaturation(&head_pid, 2*myVehicle.speed_auto_current);
 	Head_PID_SetPoint(&head_pid, Pi_To_Pi(myVehicle.target_yaw));
 	Head_PID_UpdateFeedback(&head_pid, yaw_current);
@@ -340,7 +362,7 @@ void	Vehicle_AutoRunState() {
 				myVehicle.state_auto_run = AUTO_RUN_WAIT_START;
 			} else {
 				// Return wait new target
-				myVehicle.state_auto_run = AUTO_RUN_IDLE;
+				myVehicle.state_auto_run = AUTO_RUN_FINISH;
 			}
 			break;
 		case AUTO_RUN_WAIT_START:
@@ -350,17 +372,20 @@ void	Vehicle_AutoRunState() {
 			myVehicle.count_auto++;
 			if (myVehicle.count_auto == 5) {
 				myVehicle.count_auto = 0; // Period 50ms
-
-				//Vehicle_TestFuzzy();
-//				if (myVehicle.time_out_rotate_stable >= 0.5) {
-//					myVehicle.state_auto_run = AUTO_RUN_FINISH;
-//				}
-
-				Vehicle_AutoDrive();
-				 //Check finish
-				if (Stanley_IsFinish(&myStanley)) {
-					myVehicle.state_auto_run = AUTO_RUN_FINISH;
-					Vehicle_StopHard();
+				// Rotate before if it's need
+				if (Stanley_CheckRotateFlag()) {
+					myVehicle.target_yaw = myStanley.angle_go;
+					Vehicle_RotateFuzzy();
+					if (fabs(myFuzzy.Fuzzy_Error) < PI/8)
+						Stanley_ClearRotateFlag();
+				} else {
+					// Moving linear
+					Vehicle_AutoDrive();
+					 //Check finish
+					if (Stanley_IsFinish(&myStanley)) {
+						myVehicle.state_auto_run = AUTO_RUN_FINISH;
+						Vehicle_StopHard();
+					}
 				}
 			}
 			break;

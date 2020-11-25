@@ -14,7 +14,9 @@
 
 #define VEH_MAX_MANUAL_FORWARD		0.5 	// m/s
 #define VEH_MAX_MANUAL_BACKWARD		0.25 	// m/s
-#define VEH_MAX_AUTO				0.2		// m/s
+#define VEH_MAX_AUTO				0.4		// m/s
+#define VEH_MIN_AUTO				0.1		// m/s
+#define VEH_AUTO_ROTATE				0.2		// m/s
 
 #define	TIME_LIMIT_MOVE_REFRESH	1.5 // (second)
 
@@ -84,7 +86,7 @@ void	Vehicle_ResetOdometry(void);
 void	Vehicle_CopyLidar(void);
 // Auto
 void 	Vehicle_AutoDrive(void);
-void	Vehicle_TestFuzzy(void);
+void	Vehicle_RotateFuzzy(void);
 void	Vehicle_TestHeadPID(void);
 void	Vehicle_AutoNewTarget(double target_x, double target_y, uint8_t *target_data);
 void	Vehicle_AutoStart(void);
